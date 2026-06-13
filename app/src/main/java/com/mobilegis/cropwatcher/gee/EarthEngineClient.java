@@ -214,7 +214,12 @@ public class EarthEngineClient {
         
         funcInvocation.add("arguments", args);
         element.add("functionInvocationValue", funcInvocation);
-        expression.add("element", element);
+        
+        JsonObject values = new JsonObject();
+        values.add("ndvi_image", element);
+        
+        expression.add("values", values);
+        expression.addProperty("result", "ndvi_image");
         
         payload.add("expression", expression);
         return payload;
