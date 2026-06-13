@@ -199,12 +199,6 @@ public class EarthEngineClient {
         ndviInvocation.addProperty("functionName", "Image.normalizedDifference");
         JsonObject ndviArgs = new JsonObject();
         
-        // ImageCollection.mosaic
-        JsonObject inputImage = new JsonObject();
-        JsonObject mosaicInvocation = new JsonObject();
-        mosaicInvocation.addProperty("functionName", "ImageCollection.mosaic");
-        JsonObject mosaicArgs = new JsonObject();
-        
         // ImageCollection.load
         JsonObject loadedCollection = new JsonObject();
         JsonObject loadInvocation = new JsonObject();
@@ -216,10 +210,10 @@ public class EarthEngineClient {
         loadInvocation.add("arguments", loadArgs);
         loadedCollection.add("functionInvocationValue", loadInvocation);
 
-        // Date filter (last 6 months to avoid rendering all history) using time_start milliseconds comparison
+        // Date filter (last 12 months to guarantee finding a cloud-free image in cloudy seasons) using time_start milliseconds comparison
         java.util.Calendar cal = java.util.Calendar.getInstance();
         long endTimeMs = cal.getTimeInMillis();
-        cal.add(java.util.Calendar.MONTH, -6);
+        cal.add(java.util.Calendar.MONTH, -12);
         long startTimeMs = cal.getTimeInMillis();
 
         // system:time_start >= startTimeMs
@@ -270,8 +264,32 @@ public class EarthEngineClient {
         ltFilterCall.add("arguments", ltFilterCallArgs);
         dateFilteredCollection.add("functionInvocationValue", ltFilterCall);
 
+        // Cloud filter (CLOUDY_PIXEL_PERCENTAGE < 20)
+        JsonObject cloudFilterArgs = new JsonObject();
+        JsonObject leftFieldCloud = new JsonObject();
+        leftFieldCloud.addProperty("constantValue", "CLOUDY_PIXEL_PERCENTAGE");
+        cloudFilterArgs.add("leftField", leftFieldCloud);
+        JsonObject rightValueCloud = new JsonObject();
+        rightValueCloud.addProperty("constantValue", 20); // Keep only images with < 20% clouds
+        cloudFilterArgs.add("rightValue", rightValueCloud);
+
+        JsonObject cloudFilter = new JsonObject();
+        JsonObject cloudFilterInvocation = new JsonObject();
+        cloudFilterInvocation.addProperty("functionName", "Filter.lessThan");
+        cloudFilterInvocation.add("arguments", cloudFilterArgs);
+        cloudFilter.add("functionInvocationValue", cloudFilterInvocation);
+
+        JsonObject cloudFilteredCollection = new JsonObject();
+        JsonObject cloudFilterCall = new JsonObject();
+        cloudFilterCall.addProperty("functionName", "Collection.filter");
+        JsonObject cloudFilterCallArgs = new JsonObject();
+        cloudFilterCallArgs.add("collection", dateFilteredCollection);
+        cloudFilterCallArgs.add("filter", cloudFilter);
+        cloudFilterCall.add("arguments", cloudFilterCallArgs);
+        cloudFilteredCollection.add("functionInvocationValue", cloudFilterCall);
+
         // Bounds filter (if geometry is available)
-        JsonObject finalCollection = dateFilteredCollection;
+        JsonObject filteredCollection = cloudFilteredCollection;
         if (clipGeometry != null) {
             JsonObject boundsFilterArgs = new JsonObject();
             JsonObject leftFieldVal = new JsonObject();
@@ -289,18 +307,40 @@ public class EarthEngineClient {
             JsonObject boundsFilterCall = new JsonObject();
             boundsFilterCall.addProperty("functionName", "Collection.filter");
             JsonObject boundsFilterCallArgs = new JsonObject();
-            boundsFilterCallArgs.add("collection", dateFilteredCollection);
+            boundsFilterCallArgs.add("collection", cloudFilteredCollection);
             boundsFilterCallArgs.add("filter", boundsFilter);
             boundsFilterCall.add("arguments", boundsFilterCallArgs);
             boundsFilteredCollection.add("functionInvocationValue", boundsFilterCall);
-            finalCollection = boundsFilteredCollection;
+            filteredCollection = boundsFilteredCollection;
         }
+
+        // Sort collection by date descending to put the latest image first
+        JsonObject sortArgs = new JsonObject();
+        sortArgs.add("collection", filteredCollection);
+        JsonObject propertyVal = new JsonObject();
+        propertyVal.addProperty("constantValue", "system:time_start");
+        sortArgs.add("property", propertyVal);
+        JsonObject ascendingVal = new JsonObject();
+        ascendingVal.addProperty("constantValue", false); // Descending (latest first)
+        sortArgs.add("ascending", ascendingVal);
+
+        JsonObject sortedCollection = new JsonObject();
+        JsonObject sortInvocation = new JsonObject();
+        sortInvocation.addProperty("functionName", "Collection.sort");
+        sortInvocation.add("arguments", sortArgs);
+        sortedCollection.add("functionInvocationValue", sortInvocation);
+
+        // Get the first image (the latest cloud-free one)
+        JsonObject firstArgs = new JsonObject();
+        firstArgs.add("collection", sortedCollection);
+
+        JsonObject latestImage = new JsonObject();
+        JsonObject firstInvocation = new JsonObject();
+        firstInvocation.addProperty("functionName", "Collection.first");
+        firstInvocation.add("arguments", firstArgs);
+        latestImage.add("functionInvocationValue", firstInvocation);
         
-        mosaicArgs.add("collection", finalCollection);
-        mosaicInvocation.add("arguments", mosaicArgs);
-        inputImage.add("functionInvocationValue", mosaicInvocation);
-        
-        ndviArgs.add("input", inputImage);
+        ndviArgs.add("input", latestImage);
         
         JsonArray bandsArray = new JsonArray();
         bandsArray.add("B8");
