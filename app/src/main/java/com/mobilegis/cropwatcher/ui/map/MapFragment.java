@@ -572,11 +572,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         .tileProvider(tileProvider)
                         .transparency(0.1f));
                 
-                if ("MOCK_GEE_MODE".equals(tileUrlTemplate)) {
-                    Toast.makeText(getContext(), "Chạy chế độ GEE mô phỏng (Offline)", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(getContext(), "Đã nạp bản đồ Sentinel-2 NDVI từ GEE!", Toast.LENGTH_SHORT).show();
-                }
+                Toast.makeText(getContext(), "Đã nạp bản đồ Sentinel-2 NDVI từ GEE!", Toast.LENGTH_SHORT).show();
             });
         }
 

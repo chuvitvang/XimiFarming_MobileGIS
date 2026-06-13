@@ -73,15 +73,13 @@ public class EarthEngineClient {
     public void getNdviTileUrl(final List<Plot> plotsToClip, final double minLat, final double minLng, final double maxLat, final double maxLng, final Callback callback) {
         new Thread(() -> {
             try {
-                // Try to load Service Account. If missing, this will throw FnFE which falls to Mock Mode.
+                // Try to load Service Account.
                 String token;
                 try {
                     token = getAccessToken();
                 } catch (Exception e) {
-                    Log.w(TAG, "Failed to load GEE Service Account, falling back to Mock GEE mode. Error: " + e.getMessage());
-                    // Delay slightly to simulate network
-                    Thread.sleep(1000);
-                    callback.onSuccess("MOCK_GEE_MODE");
+                    Log.e(TAG, "Failed to load GEE Service Account: " + e.getMessage());
+                    callback.onError("Không thể tải tài khoản dịch vụ GEE: " + e.getMessage());
                     return;
                 }
 

@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "CropWatcher"
+rootProject.name = "XimiFarming"
 include(":app")

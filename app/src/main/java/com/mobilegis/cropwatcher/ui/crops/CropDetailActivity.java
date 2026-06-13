@@ -76,24 +76,10 @@ public class CropDetailActivity extends AppCompatActivity {
         if (logs.isEmpty()) {
             binding.txtEmptyLogs.setVisibility(View.VISIBLE);
             binding.rvLogs.setVisibility(View.GONE);
-            binding.exgChart.setData(new ArrayList<>(), new ArrayList<>());
         } else {
             binding.txtEmptyLogs.setVisibility(View.GONE);
             binding.rvLogs.setVisibility(View.VISIBLE);
             adapter.setLogsList(logs);
-
-            // Populate ExG trend chart
-            List<CropLog> ascLogs = db.cropLogDao().getLogsForCropAsc(cropId);
-            List<Float> points = new ArrayList<>();
-            List<String> dates = new ArrayList<>();
-            
-            for (CropLog log : ascLogs) {
-                // ExG ranges from -1.0 to 1.0. Normalize to 0.0 - 1.0 for chart display
-                float normalizedVal = (float) ((log.getVegetationIndexValue() + 1.0) / 2.0);
-                points.add(normalizedVal);
-                dates.add(formatShortDate(log.getDate()));
-            }
-            binding.exgChart.setData(points, dates);
         }
     }
 
@@ -124,18 +110,14 @@ public class CropDetailActivity extends AppCompatActivity {
 
             int statusPos = statusSpinner.getSelectedItemPosition();
             String status = "HEALTHY";
-            double exgVal = 0.35; // Default ExG for Healthy
-
             if (statusPos == 1) {
                 status = "STRESSED";
-                exgVal = 0.15;
             } else if (statusPos == 2) {
                 status = "DISEASED";
-                exgVal = 0.02;
             }
 
             // Save log
-            CropLog log = new CropLog(cropId, System.currentTimeMillis(), status, notes, "", exgVal);
+            CropLog log = new CropLog(cropId, System.currentTimeMillis(), status, notes, "");
             db.cropLogDao().insert(log);
 
             // Update crop overall status
@@ -157,9 +139,7 @@ public class CropDetailActivity extends AppCompatActivity {
         return android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", new java.util.Date(timestamp)).toString();
     }
 
-    private String formatShortDate(long timestamp) {
-        return android.text.format.DateFormat.format("dd/MM", new java.util.Date(timestamp)).toString();
-    }
+
 
     // --- Timeline Logs Adapter ---
 
@@ -207,15 +187,20 @@ public class CropDetailActivity extends AppCompatActivity {
             public void bind(CropLog log) {
                 binding.txtLogDate.setText(formatDate(log.getDate()));
                 binding.txtLogNotes.setText(log.getNotes());
-                binding.txtLogIndex.setText(String.format("ExG: %+.2f", log.getVegetationIndexValue()));
 
-                // Set value colors
+                String statusStr = log.getStatus();
+                String statusText = "Khỏe mạnh";
                 int color = ContextCompat.getColor(context, R.color.health_good);
-                if ("STRESSED".equals(log.getStatus())) {
+                
+                if ("STRESSED".equals(statusStr)) {
+                    statusText = "Bị stress";
                     color = ContextCompat.getColor(context, R.color.health_warning);
-                } else if ("DISEASED".equals(log.getStatus())) {
+                } else if ("DISEASED".equals(statusStr)) {
+                    statusText = "Nhiễm bệnh";
                     color = ContextCompat.getColor(context, R.color.health_danger);
                 }
+                
+                binding.txtLogIndex.setText(statusText);
                 binding.txtLogIndex.setTextColor(color);
             }
 

@@ -138,46 +138,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ExG Green Index History Chart Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="3dp"
-                app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/card_bg"
-                android:layout_marginBottom="16dp">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Xu hướng Chỉ số Xanh lá (ExG)"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_main" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Lịch sử phân tích diệp lục từ ảnh chụp camera"
-                        android:textSize="12sp"
-                        android:textColor="@color/text_muted"
-                        android:layout_marginBottom="16dp" />
-
-                    <!-- Custom Chart View for Local ExG -->
-                    <com.mobilegis.cropwatcher.ui.components.CustomChartView
-                        android:id="@+id/exg_chart"
-                        android:layout_width="match_parent"
-                        android:layout_height="180dp" />
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
             <!-- Timeline Care Logs -->
             <RelativeLayout
@@ -208,7 +169,7 @@
                 android:id="@+id/txt_empty_logs"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Chưa có nhật ký nào.\nHãy chụp ảnh phân tích lá để tạo nhật ký đầu tiên!"
+                android:text="Chưa có nhật ký nào.\nHãy thêm nhật ký chăm sóc đầu tiên!"
                 android:textAlignment="center"
                 android:textColor="@color/text_muted"
                 android:textSize="14sp"

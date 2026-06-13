@@ -13,7 +13,7 @@ import com.mobilegis.cropwatcher.data.entity.Crop;
 import com.mobilegis.cropwatcher.data.entity.CropLog;
 import com.mobilegis.cropwatcher.data.entity.Plot;
 
-@Database(entities = {Plot.class, Crop.class, CropLog.class}, version = 2, exportSchema = false)
+@Database(entities = {Plot.class, Crop.class, CropLog.class}, version = 3, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     private static volatile AppDatabase INSTANCE;
 

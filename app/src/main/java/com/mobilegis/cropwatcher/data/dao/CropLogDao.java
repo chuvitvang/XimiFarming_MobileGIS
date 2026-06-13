@@ -23,7 +23,4 @@ public interface CropLogDao {
 
     @Query("SELECT * FROM crop_logs WHERE cropId = :cropId ORDER BY date DESC")
     List<CropLog> getLogsForCrop(int cropId);
-
-    @Query("SELECT * FROM crop_logs WHERE cropId = :cropId ORDER BY date ASC")
-    List<CropLog> getLogsForCropAsc(int cropId);
 }

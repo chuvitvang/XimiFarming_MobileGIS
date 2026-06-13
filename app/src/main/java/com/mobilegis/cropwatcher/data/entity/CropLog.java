@@ -24,15 +24,13 @@ public class CropLog {
     private String status;
     private String notes;
     private String photoPath;
-    private double vegetationIndexValue; // ExG calculated value
 
-    public CropLog(int cropId, long date, String status, String notes, String photoPath, double vegetationIndexValue) {
+    public CropLog(int cropId, long date, String status, String notes, String photoPath) {
         this.cropId = cropId;
         this.date = date;
         this.status = status;
         this.notes = notes;
         this.photoPath = photoPath;
-        this.vegetationIndexValue = vegetationIndexValue;
     }
 
     // Getters and Setters
@@ -54,6 +52,5 @@ public class CropLog {
     public String getPhotoPath() { return photoPath; }
     public void setPhotoPath(String photoPath) { this.photoPath = photoPath; }
 
-    public double getVegetationIndexValue() { return vegetationIndexValue; }
-    public void setVegetationIndexValue(double vegetationIndexValue) { this.vegetationIndexValue = vegetationIndexValue; }
+
 }

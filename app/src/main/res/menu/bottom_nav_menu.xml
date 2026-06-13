@@ -8,8 +8,4 @@
         android:id="@+id/nav_plots"
         android:icon="@android:drawable/ic_menu_myplaces"
         android:title="Lô đất" />
-    <item
-        android:id="@+id/nav_analysis"
-        android:icon="@android:drawable/ic_menu_camera"
-        android:title="Phân tích" />
 </menu>

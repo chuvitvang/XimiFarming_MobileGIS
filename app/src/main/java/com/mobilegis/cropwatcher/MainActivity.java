@@ -7,7 +7,6 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
 import com.mobilegis.cropwatcher.databinding.ActivityMainBinding;
-import com.mobilegis.cropwatcher.ui.analysis.AnalysisFragment;
 import com.mobilegis.cropwatcher.ui.map.MapFragment;
 import com.mobilegis.cropwatcher.ui.plots.PlotsFragment;
 
@@ -15,7 +14,6 @@ public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
     private final Fragment mapFragment = new MapFragment();
     private final Fragment plotsFragment = new PlotsFragment();
-    private final Fragment analysisFragment = new AnalysisFragment();
     private final FragmentManager fm = getSupportFragmentManager();
     private Fragment activeFragment = mapFragment;
 
@@ -26,7 +24,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         // Initialize bottom navigation and fragment manager
-        fm.beginTransaction().add(R.id.fragment_container, analysisFragment, "3").hide(analysisFragment).commit();
         fm.beginTransaction().add(R.id.fragment_container, plotsFragment, "2").hide(plotsFragment).commit();
         fm.beginTransaction().add(R.id.fragment_container, mapFragment, "1").commit();
 
@@ -42,10 +39,6 @@ public class MainActivity extends AppCompatActivity {
                 fm.beginTransaction().hide(activeFragment).show(plotsFragment).commit();
                 activeFragment = plotsFragment;
                 ((PlotsFragment) plotsFragment).loadPlotsData();
-                return true;
-            } else if (itemId == R.id.nav_analysis) {
-                fm.beginTransaction().hide(activeFragment).show(analysisFragment).commit();
-                activeFragment = analysisFragment;
                 return true;
             }
             return false;
