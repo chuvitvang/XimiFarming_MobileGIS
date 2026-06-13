@@ -17,6 +17,7 @@ import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -34,7 +35,10 @@ public class EarthEngineTileProvider implements TileProvider {
     public EarthEngineTileProvider(String tileUrlTemplate, List<Plot> plots) {
         this.tileUrlTemplate = tileUrlTemplate;
         this.plotsList = plots != null ? plots : new ArrayList<>();
-        this.httpClient = new OkHttpClient();
+        this.httpClient = new OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .build();
         this.gson = new Gson();
     }
 
