@@ -177,16 +177,17 @@ public class EarthEngineClient {
             }
             
             if (multiPolygonCoords.size() > 0) {
-                JsonObject geoJsonObj = new JsonObject();
-                geoJsonObj.addProperty("type", "MultiPolygon");
-                geoJsonObj.add("coordinates", multiPolygonCoords);
+                JsonObject geomCoords = new JsonObject();
+                geomCoords.add("constantValue", multiPolygonCoords);
                 
-                JsonObject geometryWrapper = new JsonObject();
-                geometryWrapper.addProperty("type", "Geometry");
-                geometryWrapper.add("geometry", geoJsonObj);
+                JsonObject geomArgs = new JsonObject();
+                geomArgs.add("coordinates", geomCoords);
                 
                 clipGeometry = new JsonObject();
-                clipGeometry.add("value", geometryWrapper);
+                JsonObject geomInvocation = new JsonObject();
+                geomInvocation.addProperty("functionName", "ee.Algorithms.GeometryConstructors.MultiPolygon");
+                geomInvocation.add("arguments", geomArgs);
+                clipGeometry.add("functionInvocationValue", geomInvocation);
             }
         }
 
