@@ -239,7 +239,7 @@ public class EarthEngineClient {
 
         JsonObject dateFilteredCollection = new JsonObject();
         JsonObject dateFilterCall = new JsonObject();
-        dateFilterCall.addProperty("functionName", "ImageCollection.filter");
+        dateFilterCall.addProperty("functionName", "Collection.filter");
         JsonObject dateFilterCallArgs = new JsonObject();
         dateFilterCallArgs.add("collection", loadedCollection);
         dateFilterCallArgs.add("filter", dateFilter);
@@ -260,7 +260,7 @@ public class EarthEngineClient {
 
             JsonObject boundsFilteredCollection = new JsonObject();
             JsonObject boundsFilterCall = new JsonObject();
-            boundsFilterCall.addProperty("functionName", "ImageCollection.filter");
+            boundsFilterCall.addProperty("functionName", "Collection.filter");
             JsonObject boundsFilterCallArgs = new JsonObject();
             boundsFilterCallArgs.add("collection", dateFilteredCollection);
             boundsFilterCallArgs.add("filter", boundsFilter);
