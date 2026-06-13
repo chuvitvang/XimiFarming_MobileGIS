@@ -13,7 +13,7 @@ import com.mobilegis.cropwatcher.data.entity.Crop;
 import com.mobilegis.cropwatcher.data.entity.CropLog;
 import com.mobilegis.cropwatcher.data.entity.Plot;
 
-@Database(entities = {Plot.class, Crop.class, CropLog.class}, version = 1, exportSchema = false)
+@Database(entities = {Plot.class, Crop.class, CropLog.class}, version = 2, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     private static volatile AppDatabase INSTANCE;
 
@@ -27,6 +27,7 @@ public abstract class AppDatabase extends RoomDatabase {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
                                     AppDatabase.class, "crop_watcher_database")
+                            .fallbackToDestructiveMigration()
                             .allowMainThreadQueries() // Simple Room queries can be run on main thread for demo, but we should make sure we don't block in production. 
                             .build();
                 }
