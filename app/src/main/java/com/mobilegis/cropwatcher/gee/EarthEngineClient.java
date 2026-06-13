@@ -250,11 +250,14 @@ public class EarthEngineClient {
         JsonObject finalCollection = dateFilteredCollection;
         if (clipGeometry != null) {
             JsonObject boundsFilterArgs = new JsonObject();
-            boundsFilterArgs.add("geometry", clipGeometry);
+            JsonObject leftFieldVal = new JsonObject();
+            leftFieldVal.addProperty("constantValue", ".geo");
+            boundsFilterArgs.add("leftField", leftFieldVal);
+            boundsFilterArgs.add("rightValue", clipGeometry);
 
             JsonObject boundsFilter = new JsonObject();
             JsonObject boundsFilterInvocation = new JsonObject();
-            boundsFilterInvocation.addProperty("functionName", "Filter.bounds");
+            boundsFilterInvocation.addProperty("functionName", "Filter.intersects");
             boundsFilterInvocation.add("arguments", boundsFilterArgs);
             boundsFilter.add("functionInvocationValue", boundsFilterInvocation);
 
