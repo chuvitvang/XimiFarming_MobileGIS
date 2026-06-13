@@ -29,12 +29,14 @@ public class EarthEngineTileProvider implements TileProvider {
     
     private final String tileUrlTemplate;
     private final List<Plot> plotsList;
+    private final EarthEngineClient geeClient;
     private final OkHttpClient httpClient;
     private final Gson gson;
 
-    public EarthEngineTileProvider(String tileUrlTemplate, List<Plot> plots) {
+    public EarthEngineTileProvider(String tileUrlTemplate, List<Plot> plots, EarthEngineClient geeClient) {
         this.tileUrlTemplate = tileUrlTemplate;
         this.plotsList = plots != null ? plots : new ArrayList<>();
+        this.geeClient = geeClient;
         this.httpClient = new OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
@@ -83,11 +85,23 @@ public class EarthEngineTileProvider implements TileProvider {
                 .replace("{y}", String.valueOf(y));
 
         try {
-            Request request = new Request.Builder().url(tileUrl).build();
+            String token = null;
+            if (geeClient != null) {
+                token = geeClient.getAccessToken();
+            }
+            
+            Request.Builder requestBuilder = new Request.Builder().url(tileUrl);
+            if (token != null) {
+                requestBuilder.addHeader("Authorization", "Bearer " + token);
+            }
+            
+            Request request = requestBuilder.build();
             try (Response response = httpClient.newCall(request).execute()) {
                 if (response.isSuccessful() && response.body() != null) {
                     byte[] data = response.body().bytes();
                     return new Tile(TILE_SIZE, TILE_SIZE, data);
+                } else {
+                    Log.e(TAG, "GEE tile fetch failed: HTTP " + response.code() + " - " + response.message());
                 }
             }
         } catch (Exception e) {

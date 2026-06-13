@@ -557,7 +557,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             getActivity().runOnUiThread(() -> {
                 if (!isGeeLayerActive) return; // double check
 
-                EarthEngineTileProvider tileProvider = new EarthEngineTileProvider(tileUrlTemplate, plotsList);
+                EarthEngineTileProvider tileProvider = new EarthEngineTileProvider(tileUrlTemplate, plotsList, geeClient);
                 
                 geeTileOverlay = googleMap.addTileOverlay(new TileOverlayOptions()
                         .tileProvider(tileProvider)
