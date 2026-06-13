@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="0.5dp"
+    app:strokeColor="@color/divider"
+    app:cardBackgroundColor="@color/card_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical">
+
+        <!-- Status Color Bar indicator -->
+        <View
+            android:id="@+id/view_status_indicator"
+            android:layout_width="6dp"
+            android:layout_height="50dp"
+            android:background="@color/health_good"
+            android:layout_marginEnd="16dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/txt_plot_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Lô Đất A"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_main" />
+
+            <TextView
+                android:id="@+id/txt_plot_area"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Diện tích: 1,200 m²"
+                android:textSize="14sp"
+                android:textColor="@color/text_muted"
+                android:layout_marginTop="4dp" />
+
+            <TextView
+                android:id="@+id/txt_plot_crops"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Số lượng cây: 25 cây"
+                android:textSize="12sp"
+                android:textColor="@color/text_muted"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Dynamic NDVI Value Indicator Badge -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="8dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="#e8f5e9"
+            android:layout_marginStart="8dp">
+
+            <TextView
+                android:id="@+id/txt_ndvi_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="6dp"
+                android:text="NDVI: 0.72"
+                android:textColor="@color/health_good"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
