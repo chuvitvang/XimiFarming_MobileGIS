@@ -215,8 +215,61 @@ public class EarthEngineClient {
         loadArgs.add("id", collectionId);
         loadInvocation.add("arguments", loadArgs);
         loadedCollection.add("functionInvocationValue", loadInvocation);
+
+        // Date filter (last 6 months to avoid rendering all history)
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US);
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        String endDateStr = sdf.format(cal.getTime());
+        cal.add(java.util.Calendar.MONTH, -6);
+        String startDateStr = sdf.format(cal.getTime());
+
+        JsonObject dateFilterArgs = new JsonObject();
+        JsonObject startVal = new JsonObject();
+        startVal.addProperty("constantValue", startDateStr);
+        dateFilterArgs.add("start", startVal);
+        JsonObject endVal = new JsonObject();
+        endVal.addProperty("constantValue", endDateStr);
+        dateFilterArgs.add("end", endVal);
+
+        JsonObject dateFilter = new JsonObject();
+        JsonObject dateFilterInvocation = new JsonObject();
+        dateFilterInvocation.addProperty("functionName", "Filter.date");
+        dateFilterInvocation.add("arguments", dateFilterArgs);
+        dateFilter.add("functionInvocationValue", dateFilterInvocation);
+
+        JsonObject dateFilteredCollection = new JsonObject();
+        JsonObject dateFilterCall = new JsonObject();
+        dateFilterCall.addProperty("functionName", "ImageCollection.filter");
+        JsonObject dateFilterCallArgs = new JsonObject();
+        dateFilterCallArgs.add("collection", loadedCollection);
+        dateFilterCallArgs.add("filter", dateFilter);
+        dateFilterCall.add("arguments", dateFilterCallArgs);
+        dateFilteredCollection.add("functionInvocationValue", dateFilterCall);
+
+        // Bounds filter (if geometry is available)
+        JsonObject finalCollection = dateFilteredCollection;
+        if (clipGeometry != null) {
+            JsonObject boundsFilterArgs = new JsonObject();
+            boundsFilterArgs.add("geometry", clipGeometry);
+
+            JsonObject boundsFilter = new JsonObject();
+            JsonObject boundsFilterInvocation = new JsonObject();
+            boundsFilterInvocation.addProperty("functionName", "Filter.bounds");
+            boundsFilterInvocation.add("arguments", boundsFilterArgs);
+            boundsFilter.add("functionInvocationValue", boundsFilterInvocation);
+
+            JsonObject boundsFilteredCollection = new JsonObject();
+            JsonObject boundsFilterCall = new JsonObject();
+            boundsFilterCall.addProperty("functionName", "ImageCollection.filter");
+            JsonObject boundsFilterCallArgs = new JsonObject();
+            boundsFilterCallArgs.add("collection", dateFilteredCollection);
+            boundsFilterCallArgs.add("filter", boundsFilter);
+            boundsFilterCall.add("arguments", boundsFilterCallArgs);
+            boundsFilteredCollection.add("functionInvocationValue", boundsFilterCall);
+            finalCollection = boundsFilteredCollection;
+        }
         
-        mosaicArgs.add("collection", loadedCollection);
+        mosaicArgs.add("collection", finalCollection);
         mosaicInvocation.add("arguments", mosaicArgs);
         inputImage.add("functionInvocationValue", mosaicInvocation);
         
