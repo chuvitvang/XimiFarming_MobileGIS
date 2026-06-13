@@ -2,6 +2,7 @@ package com.mobilegis.cropwatcher.data.entity;
 
 import androidx.room.Entity;
 import androidx.room.ForeignKey;
+import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
 @Entity(
@@ -11,7 +12,8 @@ import androidx.room.PrimaryKey;
         parentColumns = "id",
         childColumns = "cropId",
         onDelete = ForeignKey.CASCADE
-    )
+    ),
+    indices = {@Index(value = {"cropId"})}
 )
 public class CropLog {
     @PrimaryKey(autoGenerate = true)
