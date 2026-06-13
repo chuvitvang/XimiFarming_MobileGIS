@@ -185,7 +185,7 @@ public class EarthEngineClient {
                 
                 clipGeometry = new JsonObject();
                 JsonObject geomInvocation = new JsonObject();
-                geomInvocation.addProperty("functionName", "Algorithms.GeometryConstructors.MultiPolygon");
+                geomInvocation.addProperty("functionName", "GeometryConstructors.MultiPolygon");
                 geomInvocation.add("arguments", geomArgs);
                 clipGeometry.add("functionInvocationValue", geomInvocation);
             }
