@@ -70,7 +70,7 @@ public class EarthEngineClient {
     /**
      * Fetches a Google Earth Engine tile template URL for Sentinel-2 NDVI of a given region.
      */
-    public void getNdviTileUrl(final double minLat, final double minLng, final double maxLat, final double maxLng, final Callback callback) {
+    public void getNdviTileUrl(final List<Plot> plotsToClip, final double minLat, final double minLng, final double maxLat, final double maxLng, final Callback callback) {
         new Thread(() -> {
             try {
                 // Try to load Service Account. If missing, this will throw FnFE which falls to Mock Mode.
@@ -95,7 +95,7 @@ public class EarthEngineClient {
 
                 // Setup NDVI computation expression for GEE REST API v1alpha
                 // We fetch Sentinel-2 Surface Reflectance, filter by boundary, compute NDVI = (B8 - B4) / (B8 + B4)
-                JsonObject jsonPayload = createGeeNdviExpressionPayload(minLat, minLng, maxLat, maxLng);
+                JsonObject jsonPayload = createGeeNdviExpressionPayload(plotsToClip, minLat, minLng, maxLat, maxLng);
 
                 String url = "https://earthengine.googleapis.com/v1alpha/projects/" + projectId + "/maps";
                 RequestBody body = RequestBody.create(
@@ -136,14 +136,11 @@ public class EarthEngineClient {
     /**
      * Builds the GEE AST payload to calculate NDVI on Sentinel-2 image collection
      */
-    private JsonObject createGeeNdviExpressionPayload(double minLat, double minLng, double maxLat, double maxLng) {
+    private JsonObject createGeeNdviExpressionPayload(List<Plot> plots, double minLat, double minLng, double maxLat, double maxLng) {
         JsonObject payload = new JsonObject();
         JsonObject expression = new JsonObject();
         JsonObject element = new JsonObject();
         
-        // Load all plots from database to construct MultiPolygon clipping geometry
-        AppDatabase db = AppDatabase.getDatabase(context);
-        List<Plot> plots = db.plotDao().getAllPlots();
         JsonObject clipGeometry = null;
         
         if (plots != null && !plots.isEmpty()) {

@@ -521,27 +521,36 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         if (googleMap == null) return;
         if (geeTileOverlay != null) geeTileOverlay.remove();
 
-        Toast.makeText(getContext(), "Đang kết nối Google Earth Engine...", Toast.LENGTH_SHORT).show();
-
-        // Query GEE tiles for the bounding box of current plots
-        List<Plot> plots = db.plotDao().getAllPlots();
-        if (plots.isEmpty()) {
-            // Fallback to Vietnam coordinates
-            geeClient.getNdviTileUrl(8.0, 102.0, 23.0, 110.0, new EarthEngineCallback(plots));
-        } else {
-            // Calculate total bounding box of all plots
-            double minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
-            for (Plot p : plots) {
-                List<LatLng> pts = parsePoints(p.getCoordinatesJson());
-                for (LatLng latLng : pts) {
-                    minLat = Math.min(minLat, latLng.latitude);
-                    maxLat = Math.max(maxLat, latLng.latitude);
-                    minLng = Math.min(minLng, latLng.longitude);
-                    maxLng = Math.max(maxLng, latLng.longitude);
-                }
-            }
-            geeClient.getNdviTileUrl(minLat - 0.05, minLng - 0.05, maxLat + 0.05, maxLng + 0.05, new EarthEngineCallback(plots));
+        if (selectedPlot == null) {
+            Toast.makeText(getContext(), "Vui lòng chạm chọn một lô đất trên bản đồ trước để xem ảnh vệ tinh NDVI!", Toast.LENGTH_LONG).show();
+            isGeeLayerActive = false;
+            binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+            return;
         }
+
+        Toast.makeText(getContext(), "Đang kết nối GEE để tải NDVI cho lô " + selectedPlot.getName() + "...", Toast.LENGTH_SHORT).show();
+
+        List<Plot> singlePlotList = new ArrayList<>();
+        singlePlotList.add(selectedPlot);
+
+        // Calculate bounding box of the selected plot
+        double minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+        List<LatLng> pts = parsePoints(selectedPlot.getCoordinatesJson());
+        if (pts.isEmpty()) {
+            isGeeLayerActive = false;
+            binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+            Toast.makeText(getContext(), "Không tìm thấy tọa độ của lô đất!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        for (LatLng latLng : pts) {
+            minLat = Math.min(minLat, latLng.latitude);
+            maxLat = Math.max(maxLat, latLng.latitude);
+            minLng = Math.min(minLng, latLng.longitude);
+            maxLng = Math.max(maxLng, latLng.longitude);
+        }
+
+        geeClient.getNdviTileUrl(singlePlotList, minLat - 0.01, minLng - 0.01, maxLat + 0.01, maxLng + 0.01, new EarthEngineCallback(singlePlotList));
     }
 
     private class EarthEngineCallback implements EarthEngineClient.Callback {
@@ -597,6 +606,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         binding.txtSelectionStatus.setText("LÔ ĐẤT");
         binding.txtSelectionStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.primary));
         binding.btnSelectionAction.setText("Xem Chi Tiết Lô Đất");
+
+        // Dynamic reload GEE layer for this specific plot if the layer is active
+        if (isGeeLayerActive) {
+            loadGeeOverlay();
+        }
     }
 
     private void showSelectedCrop(Crop crop) {
@@ -628,6 +642,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         binding.selectionPanel.setVisibility(View.GONE);
         selectedPlot = null;
         selectedCrop = null;
+        
+        // Remove active GEE tiles overlay on deselecting plot
+        if (isGeeLayerActive) {
+            if (geeTileOverlay != null) {
+                geeTileOverlay.remove();
+                geeTileOverlay = null;
+            }
+            isGeeLayerActive = false;
+            binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+        }
     }
 
     // --- Helper JSON parsers ---
