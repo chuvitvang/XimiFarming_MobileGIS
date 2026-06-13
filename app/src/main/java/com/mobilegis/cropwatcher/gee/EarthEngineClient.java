@@ -211,6 +211,7 @@ public class EarthEngineClient {
         expression.addProperty("result", "ndvi_image");
         
         payload.add("expression", expression);
+        payload.addProperty("fileFormat", "PNG");
         return payload;
     }
 }
