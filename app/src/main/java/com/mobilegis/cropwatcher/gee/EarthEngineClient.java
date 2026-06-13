@@ -7,6 +7,8 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.mobilegis.cropwatcher.data.AppDatabase;
+import com.mobilegis.cropwatcher.data.entity.Plot;
 
 import java.io.InputStream;
 import java.util.Collections;
@@ -138,6 +140,56 @@ public class EarthEngineClient {
         JsonObject expression = new JsonObject();
         JsonObject element = new JsonObject();
         
+        // Load all plots from database to construct MultiPolygon clipping geometry
+        AppDatabase db = AppDatabase.getDatabase(context);
+        List<Plot> plots = db.plotDao().getAllPlots();
+        JsonObject clipGeometry = null;
+        
+        if (plots != null && !plots.isEmpty()) {
+            JsonArray multiPolygonCoords = new JsonArray();
+            for (Plot plot : plots) {
+                try {
+                    double[][] pts = gson.fromJson(plot.getCoordinatesJson(), double[][].class);
+                    if (pts != null && pts.length >= 3) {
+                        JsonArray polygonCoords = new JsonArray();
+                        JsonArray exteriorRing = new JsonArray();
+                        
+                        // Add points as [lng, lat] (EE uses longitude first)
+                        for (double[] pt : pts) {
+                            JsonArray coordPair = new JsonArray();
+                            coordPair.add(pt[1]); // Longitude
+                            coordPair.add(pt[0]); // Latitude
+                            exteriorRing.add(coordPair);
+                        }
+                        // Close exterior ring (first point = last point)
+                        JsonArray firstCoordPair = new JsonArray();
+                        firstCoordPair.add(pts[0][1]);
+                        firstCoordPair.add(pts[0][0]);
+                        exteriorRing.add(firstCoordPair);
+                        
+                        polygonCoords.add(exteriorRing);
+                        multiPolygonCoords.add(polygonCoords);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error parsing plot coordinates for GEE clipping: " + e.getMessage());
+                }
+            }
+            
+            if (multiPolygonCoords.size() > 0) {
+                JsonObject geomCoords = new JsonObject();
+                geomCoords.add("constantValue", multiPolygonCoords);
+                
+                JsonObject geomArgs = new JsonObject();
+                geomArgs.add("coordinates", geomCoords);
+                
+                clipGeometry = new JsonObject();
+                JsonObject geomInvocation = new JsonObject();
+                geomInvocation.addProperty("functionName", "Geometry.MultiPolygon");
+                geomInvocation.add("arguments", geomArgs);
+                clipGeometry.add("functionInvocationValue", geomInvocation);
+            }
+        }
+
         // Image.visualize
         JsonObject funcInvocation = new JsonObject();
         funcInvocation.addProperty("functionName", "Image.visualize");
@@ -182,7 +234,23 @@ public class EarthEngineClient {
         ndviInvocation.add("arguments", ndviArgs);
         ndviFunc.add("functionInvocationValue", ndviInvocation);
         
-        args.add("image", ndviFunc);
+        // Wrap NDVI computation with Image.clip if geometry is available
+        JsonObject imageToVisualize = ndviFunc;
+        if (clipGeometry != null) {
+            JsonObject clipFunc = new JsonObject();
+            JsonObject clipInvocation = new JsonObject();
+            clipInvocation.addProperty("functionName", "Image.clip");
+            
+            JsonObject clipArgs = new JsonObject();
+            clipArgs.add("input", ndviFunc);
+            clipArgs.add("geometry", clipGeometry);
+            
+            clipInvocation.add("arguments", clipArgs);
+            clipFunc.add("functionInvocationValue", clipInvocation);
+            imageToVisualize = clipFunc;
+        }
+        
+        args.add("image", imageToVisualize);
         
         // Visualization parameters as direct arguments to Image.visualize
         JsonObject minParam = new JsonObject();
