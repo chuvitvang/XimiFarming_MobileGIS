@@ -76,7 +76,7 @@ public class CropDetailActivity extends AppCompatActivity {
         if (logs.isEmpty()) {
             binding.txtEmptyLogs.setVisibility(View.VISIBLE);
             binding.rvLogs.setVisibility(View.GONE);
-            binding.exg_chart.setData(new ArrayList<>(), new ArrayList<>());
+            binding.exgChart.setData(new ArrayList<>(), new ArrayList<>());
         } else {
             binding.txtEmptyLogs.setVisibility(View.GONE);
             binding.rvLogs.setVisibility(View.VISIBLE);
@@ -93,7 +93,7 @@ public class CropDetailActivity extends AppCompatActivity {
                 points.add(normalizedVal);
                 dates.add(formatShortDate(log.getDate()));
             }
-            binding.exg_chart.setData(points, dates);
+            binding.exgChart.setData(points, dates);
         }
     }
 

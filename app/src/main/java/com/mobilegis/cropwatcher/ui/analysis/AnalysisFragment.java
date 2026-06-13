@@ -31,6 +31,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.mobilegis.cropwatcher.R;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.mobilegis.cropwatcher.data.AppDatabase;
 import com.mobilegis.cropwatcher.data.entity.Crop;
