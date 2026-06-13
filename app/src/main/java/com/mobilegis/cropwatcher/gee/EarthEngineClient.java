@@ -177,7 +177,7 @@ public class EarthEngineClient {
         bandsArray.add("B4");
         JsonObject bands = new JsonObject();
         bands.add("constantValue", bandsArray);
-        ndviArgs.add("bands", bands);
+        ndviArgs.add("bandNames", bands);
         
         ndviInvocation.add("arguments", ndviArgs);
         ndviFunc.add("functionInvocationValue", ndviInvocation);
