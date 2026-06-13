@@ -5,6 +5,7 @@ import android.util.Log;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import java.io.InputStream;
@@ -170,22 +171,35 @@ public class EarthEngineClient {
         inputImage.add("functionInvocationValue", mosaicInvocation);
         
         ndviArgs.add("input", inputImage);
+        
+        JsonArray bandsArray = new JsonArray();
+        bandsArray.add("B8");
+        bandsArray.add("B4");
         JsonObject bands = new JsonObject();
-        bands.addProperty("constantValue", "['B8', 'B4']");
+        bands.add("constantValue", bandsArray);
         ndviArgs.add("bands", bands);
+        
         ndviInvocation.add("arguments", ndviArgs);
         ndviFunc.add("functionInvocationValue", ndviInvocation);
         
         args.add("image", ndviFunc);
         
-        // Visualization parameters (min=0.1, max=0.8, palette=['red', 'yellow', 'green'])
-        JsonObject visParams = new JsonObject();
-        JsonObject visMap = new JsonObject();
-        visMap.addProperty("min", 0.1);
-        visMap.addProperty("max", 0.8);
-        visMap.addProperty("palette", "['red', 'yellow', 'green']");
-        visParams.add("constantValue", visMap);
-        args.add("visParams", visParams);
+        // Visualization parameters as direct arguments to Image.visualize
+        JsonObject minParam = new JsonObject();
+        minParam.addProperty("constantValue", 0.1);
+        args.add("min", minParam);
+
+        JsonObject maxParam = new JsonObject();
+        maxParam.addProperty("constantValue", 0.8);
+        args.add("max", maxParam);
+
+        JsonArray paletteArray = new JsonArray();
+        paletteArray.add("red");
+        paletteArray.add("yellow");
+        paletteArray.add("green");
+        JsonObject paletteParam = new JsonObject();
+        paletteParam.add("constantValue", paletteArray);
+        args.add("palette", paletteParam);
         
         funcInvocation.add("arguments", args);
         element.add("functionInvocationValue", funcInvocation);
