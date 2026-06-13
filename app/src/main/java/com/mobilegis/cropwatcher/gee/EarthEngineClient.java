@@ -181,17 +181,8 @@ public class EarthEngineClient {
                 geoJsonObj.addProperty("type", "MultiPolygon");
                 geoJsonObj.add("coordinates", multiPolygonCoords);
                 
-                JsonObject geoJsonArg = new JsonObject();
-                geoJsonArg.add("constantValue", geoJsonObj);
-                
-                JsonObject geomArgs = new JsonObject();
-                geomArgs.add("geojson", geoJsonArg);
-                
                 clipGeometry = new JsonObject();
-                JsonObject geomInvocation = new JsonObject();
-                geomInvocation.addProperty("functionName", "Geometry");
-                geomInvocation.add("arguments", geomArgs);
-                clipGeometry.add("functionInvocationValue", geomInvocation);
+                clipGeometry.add("constantValue", geoJsonObj);
             }
         }
 
