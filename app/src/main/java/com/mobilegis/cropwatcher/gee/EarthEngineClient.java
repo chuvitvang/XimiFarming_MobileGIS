@@ -216,35 +216,59 @@ public class EarthEngineClient {
         loadInvocation.add("arguments", loadArgs);
         loadedCollection.add("functionInvocationValue", loadInvocation);
 
-        // Date filter (last 6 months to avoid rendering all history)
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US);
+        // Date filter (last 6 months to avoid rendering all history) using time_start milliseconds comparison
         java.util.Calendar cal = java.util.Calendar.getInstance();
-        String endDateStr = sdf.format(cal.getTime());
+        long endTimeMs = cal.getTimeInMillis();
         cal.add(java.util.Calendar.MONTH, -6);
-        String startDateStr = sdf.format(cal.getTime());
+        long startTimeMs = cal.getTimeInMillis();
 
-        JsonObject dateFilterArgs = new JsonObject();
-        JsonObject startVal = new JsonObject();
-        startVal.addProperty("constantValue", startDateStr);
-        dateFilterArgs.add("start", startVal);
-        JsonObject endVal = new JsonObject();
-        endVal.addProperty("constantValue", endDateStr);
-        dateFilterArgs.add("end", endVal);
+        // system:time_start >= startTimeMs
+        JsonObject gteFilterArgs = new JsonObject();
+        JsonObject leftFieldGte = new JsonObject();
+        leftFieldGte.addProperty("constantValue", "system:time_start");
+        gteFilterArgs.add("leftField", leftFieldGte);
+        JsonObject rightValueGte = new JsonObject();
+        rightValueGte.addProperty("constantValue", startTimeMs);
+        gteFilterArgs.add("rightValue", rightValueGte);
 
-        JsonObject dateFilter = new JsonObject();
-        JsonObject dateFilterInvocation = new JsonObject();
-        dateFilterInvocation.addProperty("functionName", "Filter.date");
-        dateFilterInvocation.add("arguments", dateFilterArgs);
-        dateFilter.add("functionInvocationValue", dateFilterInvocation);
+        JsonObject gteFilter = new JsonObject();
+        JsonObject gteFilterInvocation = new JsonObject();
+        gteFilterInvocation.addProperty("functionName", "Filter.greaterThanOrEquals");
+        gteFilterInvocation.add("arguments", gteFilterArgs);
+        gteFilter.add("functionInvocationValue", gteFilterInvocation);
+
+        JsonObject gteFilteredCollection = new JsonObject();
+        JsonObject gteFilterCall = new JsonObject();
+        gteFilterCall.addProperty("functionName", "Collection.filter");
+        JsonObject gteFilterCallArgs = new JsonObject();
+        gteFilterCallArgs.add("collection", loadedCollection);
+        gteFilterCallArgs.add("filter", gteFilter);
+        gteFilterCall.add("arguments", gteFilterCallArgs);
+        gteFilteredCollection.add("functionInvocationValue", gteFilterCall);
+
+        // system:time_start < endTimeMs
+        JsonObject ltFilterArgs = new JsonObject();
+        JsonObject leftFieldLt = new JsonObject();
+        leftFieldLt.addProperty("constantValue", "system:time_start");
+        ltFilterArgs.add("leftField", leftFieldLt);
+        JsonObject rightValueLt = new JsonObject();
+        rightValueLt.addProperty("constantValue", endTimeMs);
+        ltFilterArgs.add("rightValue", rightValueLt);
+
+        JsonObject ltFilter = new JsonObject();
+        JsonObject ltFilterInvocation = new JsonObject();
+        ltFilterInvocation.addProperty("functionName", "Filter.lessThan");
+        ltFilterInvocation.add("arguments", ltFilterArgs);
+        ltFilter.add("functionInvocationValue", ltFilterInvocation);
 
         JsonObject dateFilteredCollection = new JsonObject();
-        JsonObject dateFilterCall = new JsonObject();
-        dateFilterCall.addProperty("functionName", "Collection.filter");
-        JsonObject dateFilterCallArgs = new JsonObject();
-        dateFilterCallArgs.add("collection", loadedCollection);
-        dateFilterCallArgs.add("filter", dateFilter);
-        dateFilterCall.add("arguments", dateFilterCallArgs);
-        dateFilteredCollection.add("functionInvocationValue", dateFilterCall);
+        JsonObject ltFilterCall = new JsonObject();
+        ltFilterCall.addProperty("functionName", "Collection.filter");
+        JsonObject ltFilterCallArgs = new JsonObject();
+        ltFilterCallArgs.add("collection", gteFilteredCollection);
+        ltFilterCallArgs.add("filter", ltFilter);
+        ltFilterCall.add("arguments", ltFilterCallArgs);
+        dateFilteredCollection.add("functionInvocationValue", ltFilterCall);
 
         // Bounds filter (if geometry is available)
         JsonObject finalCollection = dateFilteredCollection;
