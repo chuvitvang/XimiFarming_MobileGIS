@@ -133,37 +133,31 @@ public class EarthEngineClient {
      * Builds the GEE AST payload to calculate NDVI on Sentinel-2 image collection
      */
     private JsonObject createGeeNdviExpressionPayload(double minLat, double minLng, double maxLat, double maxLng) {
-        // Sentinel-2 NDVI Expression JSON structure
         JsonObject payload = new JsonObject();
-        
-        // Expression that loads S2 collection, filters by bounds and date, takes median, computes NDVI, and visualizes
         JsonObject expression = new JsonObject();
         JsonObject element = new JsonObject();
+        
+        // Image.visualize
         JsonObject funcInvocation = new JsonObject();
         funcInvocation.addProperty("functionName", "Image.visualize");
-        
         JsonObject args = new JsonObject();
         
-        // Image to visualize is normalizedDifference(B8, B4)
+        // Image.normalizedDifference
         JsonObject ndviFunc = new JsonObject();
         JsonObject ndviInvocation = new JsonObject();
         ndviInvocation.addProperty("functionName", "Image.normalizedDifference");
-        
         JsonObject ndviArgs = new JsonObject();
+        
+        // ImageCollection.mosaic
         JsonObject inputImage = new JsonObject();
-        JsonObject firstImageInvocation = new JsonObject();
-        firstImageInvocation.addProperty("functionName", "ImageCollection.mosaic");
+        JsonObject mosaicInvocation = new JsonObject();
+        mosaicInvocation.addProperty("functionName", "ImageCollection.mosaic");
+        JsonObject mosaicArgs = new JsonObject();
         
-        JsonObject medianArgs = new JsonObject();
-        JsonObject filteredCollection = new JsonObject();
-        JsonObject filterInvocation = new JsonObject();
-        filterInvocation.addProperty("functionName", "ImageCollection.filterBounds");
-        
-        JsonObject filterArgs = new JsonObject();
+        // ImageCollection.load
         JsonObject loadedCollection = new JsonObject();
         JsonObject loadInvocation = new JsonObject();
         loadInvocation.addProperty("functionName", "ImageCollection.load");
-        
         JsonObject loadArgs = new JsonObject();
         JsonObject collectionId = new JsonObject();
         collectionId.addProperty("constantValue", "COPERNICUS/S2_SR_HARMONIZED");
@@ -171,32 +165,14 @@ public class EarthEngineClient {
         loadInvocation.add("arguments", loadArgs);
         loadedCollection.add("functionInvocationValue", loadInvocation);
         
-        filterArgs.add("collection", loadedCollection);
-        
-        // Geometry bounds filter
-        JsonObject boundsGeom = new JsonObject();
-        JsonObject boundsInvocation = new JsonObject();
-        boundsInvocation.addProperty("functionName", "Geometry.Rectangle");
-        JsonObject boundsArgs = new JsonObject();
-        JsonObject coords = new JsonObject();
-        coords.addProperty("constantValue", "[" + minLng + "," + minLat + "," + maxLng + "," + maxLat + "]");
-        boundsArgs.add("coordinates", coords);
-        boundsInvocation.add("arguments", boundsArgs);
-        boundsGeom.add("functionInvocationValue", boundsInvocation);
-        
-        filterArgs.add("geometry", boundsGeom);
-        filterInvocation.add("arguments", filterArgs);
-        filteredCollection.add("functionInvocationValue", filterInvocation);
-        
-        medianArgs.add("collection", filteredCollection);
-        firstImageInvocation.add("arguments", medianArgs);
-        inputImage.add("functionInvocationValue", firstImageInvocation);
+        mosaicArgs.add("collection", loadedCollection);
+        mosaicInvocation.add("arguments", mosaicArgs);
+        inputImage.add("functionInvocationValue", mosaicInvocation);
         
         ndviArgs.add("input", inputImage);
         JsonObject bands = new JsonObject();
         bands.addProperty("constantValue", "['B8', 'B4']");
         ndviArgs.add("bands", bands);
-        
         ndviInvocation.add("arguments", ndviArgs);
         ndviFunc.add("functionInvocationValue", ndviInvocation);
         
@@ -209,7 +185,6 @@ public class EarthEngineClient {
         visMap.addProperty("max", 0.8);
         visMap.addProperty("palette", "['red', 'yellow', 'green']");
         visParams.add("constantValue", visMap);
-        
         args.add("visParams", visParams);
         
         funcInvocation.add("arguments", args);
