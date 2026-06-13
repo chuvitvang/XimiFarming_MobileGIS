@@ -152,7 +152,7 @@ public class EarthEngineClient {
         JsonObject ndviArgs = new JsonObject();
         JsonObject inputImage = new JsonObject();
         JsonObject firstImageInvocation = new JsonObject();
-        firstImageInvocation.addProperty("functionName", "ImageCollection.median");
+        firstImageInvocation.addProperty("functionName", "ImageCollection.mosaic");
         
         JsonObject medianArgs = new JsonObject();
         JsonObject filteredCollection = new JsonObject();
