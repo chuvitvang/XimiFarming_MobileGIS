@@ -20,7 +20,7 @@
             android:layout_centerVertical="true"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Quay lại"
-            app:srcCompat="@android:drawable/abc_ic_ab_back_material"
+            app:srcCompat="@drawable/abc_ic_ab_back_material"
             app:tint="@color/white" />
 
         <TextView

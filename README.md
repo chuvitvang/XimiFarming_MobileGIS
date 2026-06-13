@@ -1,4 +1,4 @@
-# CropWatcher GIS - Ứng dụng Quản lý Lô đất & Theo dõi Cây trồng
+# XimiFarming MobileGIS - Ứng dụng Quản lý Lô đất & Theo dõi Cây trồng
 
 Dự án này là một ứng dụng di động GIS được xây dựng bằng **Java** trong **Android Studio**, tích hợp bản đồ số vệ tinh và xử lý dữ liệu nông nghiệp thông minh. Ứng dụng cho phép chia lô đất, định vị cây trồng, phân tích chỉ số thực vật vệ tinh qua **Google Earth Engine (GEE)** và chỉ số độ xanh lá cây **Excess Green Index (ExG)** cục bộ qua ảnh chụp camera.
 
@@ -53,26 +53,7 @@ Dự án này là một ứng dụng di động GIS được xây dựng bằng 
 
 ---
 
-## Hướng dẫn Đẩy Dự án lên GitHub của bạn
 
-Mã nguồn dự án hiện đã được khởi tạo Git cục bộ. Để đẩy mã nguồn lên tài khoản GitHub cá nhân của bạn, hãy làm theo các bước dưới đây:
-
-1. Đăng nhập vào [GitHub](https://github.com/) và tạo một repository mới (ví dụ đặt tên là `CropWatcher-GIS`). **Không** chọn khởi tạo file README hoặc .gitignore trên web (vì dự án cục bộ đã có sẵn).
-2. Mở Git Bash / Terminal tại thư mục `c:\Users\admin\Desktop\mobileGIS` và thực hiện các lệnh sau:
-   ```bash
-   # Thêm remote dẫn tới repository GitHub của bạn
-   git remote add origin https://github.com/USERNAME/CropWatcher-GIS.git
-   
-   # Đổi tên nhánh mặc định thành main (nếu cần)
-   git branch -M main
-   
-   # Đẩy toàn bộ code lên GitHub
-   git push -u origin main
-   ```
-
-*Sau khi đẩy, mã nguồn ứng dụng sẽ được lưu trữ an toàn trên kho chứa GitHub của bạn.*
-
----
 
 ## Yêu cầu Hệ thống & Biên dịch
 
