@@ -319,14 +319,14 @@ public class EarthEngineClient {
         sortArgs.add("collection", filteredCollection);
         JsonObject propertyVal = new JsonObject();
         propertyVal.addProperty("constantValue", "system:time_start");
-        sortArgs.add("property", propertyVal);
+        sortArgs.add("key", propertyVal);
         JsonObject ascendingVal = new JsonObject();
         ascendingVal.addProperty("constantValue", false); // Descending (latest first)
         sortArgs.add("ascending", ascendingVal);
 
         JsonObject sortedCollection = new JsonObject();
         JsonObject sortInvocation = new JsonObject();
-        sortInvocation.addProperty("functionName", "Collection.sort");
+        sortInvocation.addProperty("functionName", "Collection.limit");
         sortInvocation.add("arguments", sortArgs);
         sortedCollection.add("functionInvocationValue", sortInvocation);
 
