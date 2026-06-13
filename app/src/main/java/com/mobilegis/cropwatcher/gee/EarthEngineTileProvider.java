@@ -44,6 +44,34 @@ public class EarthEngineTileProvider implements TileProvider {
             return getMockTile(x, y, zoom);
         }
 
+        // Calculate tile boundaries
+        double west = tile2lon(x, zoom);
+        double east = tile2lon(x + 1, zoom);
+        double north = tile2lat(y, zoom);
+        double south = tile2lat(y + 1, zoom);
+
+        // Check if the requested tile intersects with any plot area
+        boolean intersects = false;
+        for (Plot plot : plotsList) {
+            List<double[]> coords = parseCoordinates(plot.getCoordinatesJson());
+            if (coords == null || coords.isEmpty()) continue;
+            
+            for (double[] latLng : coords) {
+                double lat = latLng[0];
+                double lng = latLng[1];
+                if (lat >= south && lat <= north && lng >= west && lng <= east) {
+                    intersects = true;
+                    break;
+                }
+            }
+            if (intersects) break;
+        }
+
+        // If it does not cover any agricultural plot, skip GEE query to avoid unnecessary timeouts
+        if (!intersects) {
+            return NO_TILE;
+        }
+
         // Real GEE Tile Fetching
         String tileUrl = tileUrlTemplate
                 .replace("{z}", String.valueOf(zoom))
