@@ -96,6 +96,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         setupUIListeners();
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (googleMap != null) {
+            reloadMapData();
+            hideSelectionCard();
+        }
+    }
+
     private void setupUIListeners() {
         // Toggle Drawing Plot
         binding.btnDrawPlot.setOnClickListener(v -> {

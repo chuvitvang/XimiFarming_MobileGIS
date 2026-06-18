@@ -22,6 +22,9 @@ import com.mobilegis.cropwatcher.databinding.ActivityPlotDetailBinding;
 import com.mobilegis.cropwatcher.databinding.ItemCropBinding;
 import com.mobilegis.cropwatcher.ui.crops.CropDetailActivity;
 
+import androidx.appcompat.app.AlertDialog;
+import android.widget.Toast;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -31,6 +34,7 @@ public class PlotDetailActivity extends AppCompatActivity {
     private AppDatabase db;
     private int plotId;
     private CropsListAdapter adapter;
+    private Plot currentPlot;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,15 +56,39 @@ public class PlotDetailActivity extends AppCompatActivity {
 
     private void setupViews() {
         binding.btnBack.setOnClickListener(v -> finish());
+        binding.btnDelete.setOnClickListener(v -> confirmDeletePlot());
         
         binding.rvCrops.setLayoutManager(new LinearLayoutManager(this));
         adapter = new CropsListAdapter(new ArrayList<>(), this::onCropClicked);
         binding.rvCrops.setAdapter(adapter);
     }
 
+    private void confirmDeletePlot() {
+        if (currentPlot == null) return;
+        
+        new AlertDialog.Builder(this)
+                .setTitle("Xóa lô đất")
+                .setMessage("Bạn có chắc chắn muốn xóa lô đất \"" + currentPlot.getName() + "\" không? Các cây trồng và dữ liệu liên quan sẽ bị xóa vĩnh viễn.")
+                .setPositiveButton("Xóa", (dialog, which) -> deletePlot())
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    private void deletePlot() {
+        if (currentPlot == null) return;
+        new Thread(() -> {
+            db.plotDao().delete(currentPlot);
+            runOnUiThread(() -> {
+                Toast.makeText(PlotDetailActivity.this, "Đã xóa lô đất thành công", Toast.LENGTH_SHORT).show();
+                finish();
+            });
+        }).start();
+    }
+
     private void loadPlotDetails() {
         Plot plot = db.plotDao().getPlotById(plotId);
         if (plot == null) return;
+        this.currentPlot = plot;
 
         binding.txtToolbarTitle.setText("Lô đất: " + plot.getName());
         binding.txtDetailPlotName.setText(plot.getName());

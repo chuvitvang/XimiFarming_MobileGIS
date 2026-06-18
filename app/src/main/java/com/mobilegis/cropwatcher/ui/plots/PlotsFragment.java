@@ -48,6 +48,12 @@ public class PlotsFragment extends Fragment {
         loadPlotsData();
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        loadPlotsData();
+    }
+
     public void loadPlotsData() {
         if (db == null) return;
         List<Plot> plots = db.plotDao().getAllPlots();
