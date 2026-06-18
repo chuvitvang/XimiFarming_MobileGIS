@@ -136,7 +136,8 @@ public class CropDetailActivity extends AppCompatActivity {
     }
 
     private String formatDate(long timestamp) {
-        return android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", new java.util.Date(timestamp)).toString();
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault());
+        return sdf.format(new java.util.Date(timestamp));
     }
 
 
@@ -205,7 +206,8 @@ public class CropDetailActivity extends AppCompatActivity {
             }
 
             private String formatDate(long timestamp) {
-                return android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", new java.util.Date(timestamp)).toString();
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault());
+                return sdf.format(new java.util.Date(timestamp));
             }
         }
     }

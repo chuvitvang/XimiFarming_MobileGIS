@@ -38,6 +38,17 @@ public class EarthEngineClient {
         void onError(String errorMessage);
     }
 
+    public interface TimestampCallback {
+        void onSuccess(long timestamp);
+        void onError(String errorMessage);
+    }
+
+    public interface NdviCallback {
+        void onSuccess(double meanNdvi);
+        void onError(String errorMessage);
+    }
+
+
     public EarthEngineClient(Context context) {
         this.context = context;
         this.httpClient = new OkHttpClient.Builder()
@@ -132,71 +143,63 @@ public class EarthEngineClient {
     }
 
     /**
-     * Builds the GEE AST payload to calculate NDVI on Sentinel-2 image collection
+     * Parses the plot coordinates into a GEE MultiPolygon geometry.
      */
-    private JsonObject createGeeNdviExpressionPayload(List<Plot> plots, double minLat, double minLng, double maxLat, double maxLng) {
-        JsonObject payload = new JsonObject();
-        JsonObject expression = new JsonObject();
-        JsonObject element = new JsonObject();
-        
-        JsonObject clipGeometry = null;
-        
-        if (plots != null && !plots.isEmpty()) {
-            JsonArray multiPolygonCoords = new JsonArray();
-            for (Plot plot : plots) {
-                try {
-                    double[][] pts = gson.fromJson(plot.getCoordinatesJson(), double[][].class);
-                    if (pts != null && pts.length >= 3) {
-                        JsonArray polygonCoords = new JsonArray();
-                        JsonArray exteriorRing = new JsonArray();
-                        
-                        // Add points as [lng, lat] (EE uses longitude first)
-                        for (double[] pt : pts) {
-                            JsonArray coordPair = new JsonArray();
-                            coordPair.add(pt[1]); // Longitude
-                            coordPair.add(pt[0]); // Latitude
-                            exteriorRing.add(coordPair);
-                        }
-                        // Close exterior ring (first point = last point)
-                        JsonArray firstCoordPair = new JsonArray();
-                        firstCoordPair.add(pts[0][1]);
-                        firstCoordPair.add(pts[0][0]);
-                        exteriorRing.add(firstCoordPair);
-                        
-                        polygonCoords.add(exteriorRing);
-                        multiPolygonCoords.add(polygonCoords);
+    private JsonObject createClipGeometry(List<Plot> plots) {
+        if (plots == null || plots.isEmpty()) {
+            return null;
+        }
+        JsonArray multiPolygonCoords = new JsonArray();
+        for (Plot plot : plots) {
+            try {
+                double[][] pts = gson.fromJson(plot.getCoordinatesJson(), double[][].class);
+                if (pts != null && pts.length >= 3) {
+                    JsonArray polygonCoords = new JsonArray();
+                    JsonArray exteriorRing = new JsonArray();
+                    
+                    // Add points as [lng, lat] (EE uses longitude first)
+                    for (double[] pt : pts) {
+                        JsonArray coordPair = new JsonArray();
+                        coordPair.add(pt[1]); // Longitude
+                        coordPair.add(pt[0]); // Latitude
+                        exteriorRing.add(coordPair);
                     }
-                } catch (Exception e) {
-                    Log.e(TAG, "Error parsing plot coordinates for GEE clipping: " + e.getMessage());
+                    // Close exterior ring (first point = last point)
+                    JsonArray firstCoordPair = new JsonArray();
+                    firstCoordPair.add(pts[0][1]);
+                    firstCoordPair.add(pts[0][0]);
+                    exteriorRing.add(firstCoordPair);
+                    
+                    polygonCoords.add(exteriorRing);
+                    multiPolygonCoords.add(polygonCoords);
                 }
-            }
-            
-            if (multiPolygonCoords.size() > 0) {
-                JsonObject geomCoords = new JsonObject();
-                geomCoords.add("constantValue", multiPolygonCoords);
-                
-                JsonObject geomArgs = new JsonObject();
-                geomArgs.add("coordinates", geomCoords);
-                
-                clipGeometry = new JsonObject();
-                JsonObject geomInvocation = new JsonObject();
-                geomInvocation.addProperty("functionName", "GeometryConstructors.MultiPolygon");
-                geomInvocation.add("arguments", geomArgs);
-                clipGeometry.add("functionInvocationValue", geomInvocation);
+            } catch (Exception e) {
+                Log.e(TAG, "Error parsing plot coordinates for GEE clipping: " + e.getMessage());
             }
         }
+        
+        if (multiPolygonCoords.size() > 0) {
+            JsonObject geomCoords = new JsonObject();
+            geomCoords.add("constantValue", multiPolygonCoords);
+            
+            JsonObject geomArgs = new JsonObject();
+            geomArgs.add("coordinates", geomCoords);
+            
+            JsonObject clipGeometry = new JsonObject();
+            JsonObject geomInvocation = new JsonObject();
+            geomInvocation.addProperty("functionName", "GeometryConstructors.MultiPolygon");
+            geomInvocation.add("arguments", geomArgs);
+            clipGeometry.add("functionInvocationValue", geomInvocation);
+            return clipGeometry;
+        }
+        return null;
+    }
 
-        // Image.visualize
-        JsonObject funcInvocation = new JsonObject();
-        funcInvocation.addProperty("functionName", "Image.visualize");
-        JsonObject args = new JsonObject();
-        
-        // Image.normalizedDifference
-        JsonObject ndviFunc = new JsonObject();
-        JsonObject ndviInvocation = new JsonObject();
-        ndviInvocation.addProperty("functionName", "Image.normalizedDifference");
-        JsonObject ndviArgs = new JsonObject();
-        
+    /**
+     * Builds the GEE AST payload representing the filtered Sentinel-2 image collection
+     * and selects the first (latest) image.
+     */
+    private JsonObject createLatestImageExpression(JsonObject clipGeometry) {
         // ImageCollection.load
         JsonObject loadedCollection = new JsonObject();
         JsonObject loadInvocation = new JsonObject();
@@ -208,10 +211,10 @@ public class EarthEngineClient {
         loadInvocation.add("arguments", loadArgs);
         loadedCollection.add("functionInvocationValue", loadInvocation);
 
-        // Date filter (last 12 months to guarantee finding a cloud-free image in cloudy seasons) using time_start milliseconds comparison
+        // Date filter (last 36 months to guarantee finding a cloud-free image in dry seasons)
         java.util.Calendar cal = java.util.Calendar.getInstance();
         long endTimeMs = cal.getTimeInMillis();
-        cal.add(java.util.Calendar.MONTH, -12);
+        cal.add(java.util.Calendar.MONTH, -36);
         long startTimeMs = cal.getTimeInMillis();
 
         // system:time_start >= startTimeMs
@@ -268,7 +271,7 @@ public class EarthEngineClient {
         leftFieldCloud.addProperty("constantValue", "CLOUDY_PIXEL_PERCENTAGE");
         cloudFilterArgs.add("leftField", leftFieldCloud);
         JsonObject rightValueCloud = new JsonObject();
-        rightValueCloud.addProperty("constantValue", 20); // Keep only images with < 20% clouds
+        rightValueCloud.addProperty("constantValue", 20);
         cloudFilterArgs.add("rightValue", rightValueCloud);
 
         JsonObject cloudFilter = new JsonObject();
@@ -312,14 +315,19 @@ public class EarthEngineClient {
             filteredCollection = boundsFilteredCollection;
         }
 
-        // Sort collection by date descending to put the latest image first
         JsonObject sortArgs = new JsonObject();
         sortArgs.add("collection", filteredCollection);
+        
+        JsonObject limitVal = new JsonObject();
+        limitVal.addProperty("constantValue", 1);
+        sortArgs.add("limit", limitVal);
+
         JsonObject propertyVal = new JsonObject();
         propertyVal.addProperty("constantValue", "system:time_start");
         sortArgs.add("key", propertyVal);
+
         JsonObject ascendingVal = new JsonObject();
-        ascendingVal.addProperty("constantValue", false); // Descending (latest first)
+        ascendingVal.addProperty("constantValue", false);
         sortArgs.add("ascending", ascendingVal);
 
         JsonObject sortedCollection = new JsonObject();
@@ -328,7 +336,6 @@ public class EarthEngineClient {
         sortInvocation.add("arguments", sortArgs);
         sortedCollection.add("functionInvocationValue", sortInvocation);
 
-        // Get the first image (the latest cloud-free one)
         JsonObject firstArgs = new JsonObject();
         firstArgs.add("collection", sortedCollection);
 
@@ -337,6 +344,31 @@ public class EarthEngineClient {
         firstInvocation.addProperty("functionName", "Collection.first");
         firstInvocation.add("arguments", firstArgs);
         latestImage.add("functionInvocationValue", firstInvocation);
+
+        return latestImage;
+    }
+
+    /**
+     * Builds the GEE AST payload to calculate NDVI on Sentinel-2 image collection
+     */
+    private JsonObject createGeeNdviExpressionPayload(List<Plot> plots, double minLat, double minLng, double maxLat, double maxLng) {
+        JsonObject payload = new JsonObject();
+        JsonObject expression = new JsonObject();
+        JsonObject element = new JsonObject();
+        
+        JsonObject clipGeometry = createClipGeometry(plots);
+        JsonObject latestImage = createLatestImageExpression(clipGeometry);
+
+        // Image.visualize
+        JsonObject funcInvocation = new JsonObject();
+        funcInvocation.addProperty("functionName", "Image.visualize");
+        JsonObject args = new JsonObject();
+        
+        // Image.normalizedDifference
+        JsonObject ndviFunc = new JsonObject();
+        JsonObject ndviInvocation = new JsonObject();
+        ndviInvocation.addProperty("functionName", "Image.normalizedDifference");
+        JsonObject ndviArgs = new JsonObject();
         
         ndviArgs.add("input", latestImage);
         
@@ -368,7 +400,7 @@ public class EarthEngineClient {
         
         args.add("image", imageToVisualize);
         
-        // Visualization parameters as direct arguments to Image.visualize
+        // Visualization parameters
         JsonObject minParam = new JsonObject();
         minParam.addProperty("constantValue", 0.1);
         args.add("min", minParam);
@@ -397,5 +429,277 @@ public class EarthEngineClient {
         payload.add("expression", expression);
         payload.addProperty("fileFormat", "PNG");
         return payload;
+    }
+
+    /**
+     * Builds the GEE AST payload to fetch the timestamp of the latest Sentinel-2 image
+     */
+    private JsonObject createLatestImageTimestampPayload(List<Plot> plots, double minLat, double minLng, double maxLat, double maxLng) {
+        JsonObject payload = new JsonObject();
+        JsonObject expression = new JsonObject();
+        JsonObject element = new JsonObject();
+        
+        JsonObject clipGeometry = createClipGeometry(plots);
+        JsonObject latestImage = createLatestImageExpression(clipGeometry);
+        
+        // Element.get(latestImage, "system:time_start")
+        JsonObject getPropInvocation = new JsonObject();
+        getPropInvocation.addProperty("functionName", "Element.get");
+        JsonObject args = new JsonObject();
+        args.add("object", latestImage);
+        JsonObject propertyParam = new JsonObject();
+        propertyParam.addProperty("constantValue", "system:time_start");
+        args.add("property", propertyParam);
+        getPropInvocation.add("arguments", args);
+        element.add("functionInvocationValue", getPropInvocation);
+        
+        JsonObject values = new JsonObject();
+        values.add("latest_timestamp", element);
+        
+        expression.add("values", values);
+        expression.addProperty("result", "latest_timestamp");
+        
+        payload.add("expression", expression);
+        return payload;
+    }
+
+    /**
+     * Fetches the latest available Sentinel-2 image's timestamp from GEE.
+     */
+    public void getLatestImageTimestamp(final List<Plot> plotsToClip, final double minLat, final double minLng, final double maxLat, final double maxLng, final TimestampCallback callback) {
+        new Thread(() -> {
+            try {
+                String token;
+                try {
+                    token = getAccessToken();
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to load GEE Service Account: " + e.getMessage());
+                    callback.onError("Không thể tải tài khoản dịch vụ GEE: " + e.getMessage());
+                    return;
+                }
+
+                InputStream stream = context.getAssets().open("service_account_key.json");
+                Map<String, Object> keyMap = gson.fromJson(new java.io.InputStreamReader(stream), Map.class);
+                String projectId = (String) keyMap.get("project_id");
+                if (projectId == null || projectId.isEmpty()) {
+                    projectId = "earthengine-legacy";
+                }
+
+                JsonObject jsonPayload = createLatestImageTimestampPayload(plotsToClip, minLat, minLng, maxLat, maxLng);
+                Log.d(TAG, "GEE request payload for value:compute: " + gson.toJson(jsonPayload));
+
+                String url = "https://earthengine.googleapis.com/v1alpha/projects/" + projectId + "/value:compute";
+                RequestBody body = RequestBody.create(
+                        gson.toJson(jsonPayload),
+                        MediaType.get("application/json; charset=utf-8")
+                );
+
+                Request request = new Request.Builder()
+                        .url(url)
+                        .post(body)
+                        .addHeader("Authorization", "Bearer " + token)
+                        .build();
+
+                try (Response response = httpClient.newCall(request).execute()) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        String responseBody = response.body().string();
+                        Log.d(TAG, "GEE response body for value:compute: " + responseBody);
+                        JsonObject jsonResponse = gson.fromJson(responseBody, JsonObject.class);
+                        
+                        long timestamp = -1;
+                        com.google.gson.JsonElement valElement = null;
+                        if (jsonResponse.has("result")) {
+                            valElement = jsonResponse.get("result");
+                        } else if (jsonResponse.has("value")) {
+                            valElement = jsonResponse.get("value");
+                        }
+                        
+                        if (valElement != null) {
+                            if (valElement.isJsonPrimitive()) {
+                                timestamp = valElement.getAsLong();
+                            } else if (valElement.isJsonObject()) {
+                                JsonObject valObj = valElement.getAsJsonObject();
+                                if (valObj.has("value")) {
+                                    timestamp = valObj.get("value").getAsLong();
+                                } else if (valObj.has("result")) {
+                                    timestamp = valObj.get("result").getAsLong();
+                                }
+                            }
+                        }
+                        
+                        if (timestamp > 0) {
+                            Log.d(TAG, "Latest GEE image timestamp: " + timestamp);
+                            callback.onSuccess(timestamp);
+                        } else {
+                            callback.onError("Không tìm thấy ảnh vệ tinh nào cho khu vực này.");
+                        }
+                    } else {
+                        String errBody = response.body() != null ? response.body().string() : "No response body";
+                        Log.e(TAG, "GEE REST API Error on value:compute: " + errBody);
+                        callback.onError("GEE API Error: " + response.code() + " - " + response.message());
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error fetching latest image timestamp from GEE", e);
+                callback.onError(e.getMessage());
+            }
+        }).start();
+    }
+
+    /**
+     * Builds the GEE AST payload to calculate the average NDVI of a plot
+     */
+    private JsonObject createMeanNdviPayload(List<Plot> plots, double minLat, double minLng, double maxLat, double maxLng) {
+        JsonObject payload = new JsonObject();
+        JsonObject expression = new JsonObject();
+        JsonObject element = new JsonObject();
+        
+        JsonObject clipGeometry = createClipGeometry(plots);
+        JsonObject latestImage = createLatestImageExpression(clipGeometry);
+
+        // NDVI computation: Image.normalizedDifference
+        JsonObject ndviFunc = new JsonObject();
+        JsonObject ndviInvocation = new JsonObject();
+        ndviInvocation.addProperty("functionName", "Image.normalizedDifference");
+        JsonObject ndviArgs = new JsonObject();
+        ndviArgs.add("input", latestImage);
+        
+        JsonArray bandsArray = new JsonArray();
+        bandsArray.add("B8");
+        bandsArray.add("B4");
+        JsonObject bands = new JsonObject();
+        bands.add("constantValue", bandsArray);
+        ndviArgs.add("bandNames", bands);
+        ndviInvocation.add("arguments", ndviArgs);
+        ndviFunc.add("functionInvocationValue", ndviInvocation);
+
+        // Image.reduceRegion
+        JsonObject reduceFunc = new JsonObject();
+        JsonObject reduceInvocation = new JsonObject();
+        reduceInvocation.addProperty("functionName", "Image.reduceRegion");
+        JsonObject reduceArgs = new JsonObject();
+        reduceArgs.add("image", ndviFunc);
+        
+        JsonObject reducer = new JsonObject();
+        JsonObject reducerInvocation = new JsonObject();
+        reducerInvocation.addProperty("functionName", "Reducer.mean");
+        reducerInvocation.add("arguments", new JsonObject()); // Empty arguments for ee.Reducer.mean()
+        reducer.add("functionInvocationValue", reducerInvocation);
+        reduceArgs.add("reducer", reducer);
+        
+        if (clipGeometry != null) {
+            reduceArgs.add("geometry", clipGeometry);
+        }
+        
+        JsonObject scaleParam = new JsonObject();
+        scaleParam.addProperty("constantValue", 10);
+        reduceArgs.add("scale", scaleParam);
+        
+        reduceInvocation.add("arguments", reduceArgs);
+        reduceFunc.add("functionInvocationValue", reduceInvocation);
+
+        // Dictionary.get(reduceResult, "nd")
+        JsonObject getInvocation = new JsonObject();
+        getInvocation.addProperty("functionName", "Dictionary.get");
+        JsonObject getArgs = new JsonObject();
+        getArgs.add("dictionary", reduceFunc);
+        JsonObject keyParam = new JsonObject();
+        keyParam.addProperty("constantValue", "nd");
+        getArgs.add("key", keyParam);
+        getInvocation.add("arguments", getArgs);
+        
+        element.add("functionInvocationValue", getInvocation);
+        
+        JsonObject values = new JsonObject();
+        values.add("mean_ndvi", element);
+        
+        expression.add("values", values);
+        expression.addProperty("result", "mean_ndvi");
+        
+        payload.add("expression", expression);
+        return payload;
+    }
+
+    /**
+     * Calculates the mean NDVI of the plot from Google Earth Engine.
+     */
+    public void getMeanNdvi(final List<Plot> plotsToClip, final double minLat, final double minLng, final double maxLat, final double maxLng, final NdviCallback callback) {
+        new Thread(() -> {
+            try {
+                String token;
+                try {
+                    token = getAccessToken();
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to load GEE Service Account: " + e.getMessage());
+                    callback.onError("Không thể tải tài khoản dịch vụ GEE: " + e.getMessage());
+                    return;
+                }
+
+                InputStream stream = context.getAssets().open("service_account_key.json");
+                Map<String, Object> keyMap = gson.fromJson(new java.io.InputStreamReader(stream), Map.class);
+                String projectId = (String) keyMap.get("project_id");
+                if (projectId == null || projectId.isEmpty()) {
+                    projectId = "earthengine-legacy";
+                }
+
+                JsonObject jsonPayload = createMeanNdviPayload(plotsToClip, minLat, minLng, maxLat, maxLng);
+                Log.d(TAG, "GEE request payload for mean NDVI value:compute: " + gson.toJson(jsonPayload));
+
+                String url = "https://earthengine.googleapis.com/v1alpha/projects/" + projectId + "/value:compute";
+                RequestBody body = RequestBody.create(
+                        gson.toJson(jsonPayload),
+                        MediaType.get("application/json; charset=utf-8")
+                );
+
+                Request request = new Request.Builder()
+                        .url(url)
+                        .post(body)
+                        .addHeader("Authorization", "Bearer " + token)
+                        .build();
+
+                try (Response response = httpClient.newCall(request).execute()) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        String responseBody = response.body().string();
+                        Log.d(TAG, "GEE response body for mean NDVI: " + responseBody);
+                        JsonObject jsonResponse = gson.fromJson(responseBody, JsonObject.class);
+                        
+                        double meanNdvi = -1;
+                        com.google.gson.JsonElement valElement = null;
+                        if (jsonResponse.has("result")) {
+                            valElement = jsonResponse.get("result");
+                        } else if (jsonResponse.has("value")) {
+                            valElement = jsonResponse.get("value");
+                        }
+                        
+                        if (valElement != null) {
+                            if (valElement.isJsonPrimitive()) {
+                                meanNdvi = valElement.getAsDouble();
+                            } else if (valElement.isJsonObject()) {
+                                JsonObject valObj = valElement.getAsJsonObject();
+                                if (valObj.has("value")) {
+                                    meanNdvi = valObj.get("value").getAsDouble();
+                                } else if (valObj.has("result")) {
+                                    meanNdvi = valObj.get("result").getAsDouble();
+                                }
+                            }
+                        }
+                        
+                        if (meanNdvi >= -1.0 && meanNdvi <= 1.0) {
+                            Log.d(TAG, "Mean GEE NDVI calculated: " + meanNdvi);
+                            callback.onSuccess(meanNdvi);
+                        } else {
+                            callback.onError("Không thể tính toán chỉ số NDVI.");
+                        }
+                    } else {
+                        String errBody = response.body() != null ? response.body().string() : "No response body";
+                        Log.e(TAG, "GEE REST API Error on mean NDVI compute: " + errBody);
+                        callback.onError("GEE API Error: " + response.code() + " - " + response.message());
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error fetching mean NDVI from GEE", e);
+                callback.onError(e.getMessage());
+            }
+        }).start();
     }
 }

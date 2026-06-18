@@ -61,6 +61,7 @@
 
         <!-- Dynamic NDVI Value Indicator Badge -->
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_ndvi_badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:cardCornerRadius="8dp"

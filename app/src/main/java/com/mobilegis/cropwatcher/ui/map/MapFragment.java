@@ -515,6 +515,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.accent));
             loadGeeOverlay();
         }
+        if (selectedPlot != null) {
+            updatePlotSelectionDetails(selectedPlot);
+        }
     }
 
     private void loadGeeOverlay() {
@@ -528,9 +531,23 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             return;
         }
 
-        Toast.makeText(getContext(), "Đang kết nối GEE để tải NDVI cho lô " + selectedPlot.getName() + "...", Toast.LENGTH_SHORT).show();
+        // Update plot selection details to show "Đang tải..." or cached date if not checked yet
+        updatePlotSelectionDetails(selectedPlot);
 
-        List<Plot> singlePlotList = new ArrayList<>();
+        final int plotId = selectedPlot.getId();
+        final String plotName = selectedPlot.getName();
+        final android.content.SharedPreferences prefs = requireContext().getSharedPreferences("gee_cache", android.content.Context.MODE_PRIVATE);
+        
+        long lastCheckTime = prefs.getLong("gee_last_check_time_" + plotId, 0);
+        final long cachedLatestImageTime = prefs.getLong("gee_latest_image_time_" + plotId, 0);
+        String cachedTileUrlTemplate = prefs.getString("gee_tile_template_" + plotId, null);
+        long cachedTileUrlExpiry = prefs.getLong("gee_tile_expiry_" + plotId, 0);
+        
+        long currentTime = System.currentTimeMillis();
+        boolean hasValidUrl = cachedTileUrlTemplate != null && currentTime < cachedTileUrlExpiry;
+        boolean checkExpired = currentTime - lastCheckTime > 12 * 60 * 60 * 1000; // 12 hours check interval
+
+        final List<Plot> singlePlotList = new ArrayList<>();
         singlePlotList.add(selectedPlot);
 
         // Calculate bounding box of the selected plot
@@ -549,55 +566,276 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             minLng = Math.min(minLng, latLng.longitude);
             maxLng = Math.max(maxLng, latLng.longitude);
         }
+        
+        final double finalMinLat = minLat;
+        final double finalMinLng = minLng;
+        final double finalMaxLat = maxLat;
+        final double finalMaxLng = maxLng;
 
-        geeClient.getNdviTileUrl(singlePlotList, minLat - 0.01, minLng - 0.01, maxLat + 0.01, maxLng + 0.01, new EarthEngineCallback(singlePlotList));
+        // Case 1: Within check interval AND we have a valid, unexpired tile URL template.
+        // We can render immediately from local cache & pre-fetched tiles, making absolutely zero API calls.
+        if (!checkExpired && hasValidUrl && cachedLatestImageTime > 0) {
+            String dateStr = formatDate(cachedLatestImageTime);
+            Toast.makeText(getContext(), "Sử dụng ảnh vệ tinh lưu cục bộ (chụp ngày " + dateStr + ")", Toast.LENGTH_SHORT).show();
+            
+            EarthEngineTileProvider tileProvider = new EarthEngineTileProvider(requireContext(), cachedTileUrlTemplate, singlePlotList, geeClient);
+            geeTileOverlay = googleMap.addTileOverlay(new TileOverlayOptions()
+                    .tileProvider(tileProvider)
+                    .transparency(0.1f));
+            updatePlotSelectionDetails(selectedPlot);
+            return;
+        }
+
+        // Case 2: We need to verify if there's a new image on GEE
+        if (checkExpired || cachedLatestImageTime == 0) {
+            Toast.makeText(getContext(), "Đang kiểm tra ảnh vệ tinh mới từ GEE cho lô " + plotName + "...", Toast.LENGTH_SHORT).show();
+            
+            geeClient.getLatestImageTimestamp(singlePlotList, finalMinLat - 0.01, finalMinLng - 0.01, finalMaxLat + 0.01, finalMaxLng + 0.01, new EarthEngineClient.TimestampCallback() {
+                @Override
+                public void onSuccess(final long latestImageTime) {
+                    if (getActivity() == null) return;
+                    getActivity().runOnUiThread(() -> {
+                        if (!isGeeLayerActive) return;
+                        
+                        // Compare GEE timestamp with cached timestamp
+                        if (latestImageTime == cachedLatestImageTime && cachedLatestImageTime > 0) {
+                            // No new image! We can use our cached tile template if it is still valid.
+                            prefs.edit().putLong("gee_last_check_time_" + plotId, System.currentTimeMillis()).apply();
+                            
+                            String dateStr = formatDate(cachedLatestImageTime);
+                            Toast.makeText(getContext(), "Không có ảnh vệ tinh mới. Sử dụng ảnh cũ lưu cục bộ (ngày " + dateStr + ")", Toast.LENGTH_LONG).show();
+                            updatePlotSelectionDetails(selectedPlot);
+                            
+                            boolean isUrlStillValid = cachedTileUrlTemplate != null && System.currentTimeMillis() < cachedTileUrlExpiry;
+                            if (isUrlStillValid) {
+                                EarthEngineTileProvider tileProvider = new EarthEngineTileProvider(requireContext(), cachedTileUrlTemplate, singlePlotList, geeClient);
+                                geeTileOverlay = googleMap.addTileOverlay(new TileOverlayOptions()
+                                        .tileProvider(tileProvider)
+                                        .transparency(0.1f));
+                            } else {
+                                // Template is expired, request a new session but DO NOT clear tile cache files
+                                geeClient.getNdviTileUrl(singlePlotList, finalMinLat - 0.01, finalMinLng - 0.01, finalMaxLat + 0.01, finalMaxLng + 0.01, new EarthEngineClient.Callback() {
+                                    @Override
+                                    public void onSuccess(String tileUrlTemplate) {
+                                        if (getActivity() == null) return;
+                                        getActivity().runOnUiThread(() -> {
+                                            if (!isGeeLayerActive) return;
+                                            
+                                            // Cache the new template (valid for 2 hours)
+                                            prefs.edit()
+                                                    .putString("gee_tile_template_" + plotId, tileUrlTemplate)
+                                                    .putLong("gee_tile_expiry_" + plotId, System.currentTimeMillis() + 2 * 60 * 60 * 1000)
+                                                    .apply();
+                                            
+                                            EarthEngineTileProvider tileProvider = new EarthEngineTileProvider(requireContext(), tileUrlTemplate, singlePlotList, geeClient);
+                                            geeTileOverlay = googleMap.addTileOverlay(new TileOverlayOptions()
+                                                    .tileProvider(tileProvider)
+                                                    .transparency(0.1f));
+                                            updatePlotSelectionDetails(selectedPlot);
+                                        });
+                                    }
+
+                                    @Override
+                                    public void onError(String errorMessage) {
+                                        showError(errorMessage);
+                                    }
+                                });
+                            }
+                        } else {
+                            // Case 2b: A new image is available (or no cache exists yet)
+                            // We call GEE maps API to get a new session, and we will clear the tile cache files
+                            Toast.makeText(getContext(), "Có ảnh vệ tinh mới! Đang tải...", Toast.LENGTH_SHORT).show();
+                            
+                            geeClient.getNdviTileUrl(singlePlotList, finalMinLat - 0.01, finalMinLng - 0.01, finalMaxLat + 0.01, finalMaxLng + 0.01, new EarthEngineClient.Callback() {
+                                @Override
+                                public void onSuccess(String tileUrlTemplate) {
+                                    if (getActivity() == null) return;
+                                    
+                                    // 1. Clear old tile files on disk in background
+                                    new Thread(() -> EarthEngineTileProvider.clearTileCacheForPlot(requireContext(), plotId)).start();
+                                    
+                                    // 2. Fetch mean NDVI from GEE
+                                    geeClient.getMeanNdvi(singlePlotList, finalMinLat - 0.01, finalMinLng - 0.01, finalMaxLat + 0.01, finalMaxLng + 0.01, new EarthEngineClient.NdviCallback() {
+                                        @Override
+                                        public void onSuccess(double meanNdvi) {
+                                            if (getActivity() == null) return;
+                                            
+                                            String healthStatus = "GOOD";
+                                            if (meanNdvi < 0.5) {
+                                                healthStatus = "DANGER";
+                                            } else if (meanNdvi < 0.7) {
+                                                healthStatus = "WARNING";
+                                            }
+                                            
+                                            selectedPlot.setAvgNdvi(meanNdvi);
+                                            selectedPlot.setHealthStatus(healthStatus);
+                                            
+                                            // Save to DB in background
+                                            new Thread(() -> db.plotDao().update(selectedPlot)).start();
+                                            
+                                            getActivity().runOnUiThread(() -> {
+                                                if (!isGeeLayerActive) return;
+                                                
+                                                // Cache new metadata
+                                                prefs.edit()
+                                                        .putLong("gee_last_check_time_" + plotId, System.currentTimeMillis())
+                                                        .putLong("gee_latest_image_time_" + plotId, latestImageTime)
+                                                        .putString("gee_tile_template_" + plotId, tileUrlTemplate)
+                                                        .putLong("gee_tile_expiry_" + plotId, System.currentTimeMillis() + 2 * 60 * 60 * 1000)
+                                                        .apply();
+                                                
+                                                String dateStr = formatDate(latestImageTime);
+                                                Toast.makeText(getContext(), String.format("Đã cập nhật ảnh vệ tinh %s! NDVI trung bình: %.2f", dateStr, meanNdvi), Toast.LENGTH_LONG).show();
+                                                updatePlotSelectionDetails(selectedPlot);
+                                                reloadMapData(); // Redraw polygons with new health status color!
+                                                
+                                                EarthEngineTileProvider tileProvider = new EarthEngineTileProvider(requireContext(), tileUrlTemplate, singlePlotList, geeClient);
+                                                geeTileOverlay = googleMap.addTileOverlay(new TileOverlayOptions()
+                                                        .tileProvider(tileProvider)
+                                                        .transparency(0.1f));
+                                            });
+                                        }
+
+                                        @Override
+                                        public void onError(String errorMsg) {
+                                            if (getActivity() == null) return;
+                                            getActivity().runOnUiThread(() -> {
+                                                Toast.makeText(getContext(), "Không tính được NDVI thực tế: " + errorMsg + ". Sử dụng giả lập.", Toast.LENGTH_SHORT).show();
+                                                triggerMockGeeeMode(selectedPlot);
+                                                
+                                                // Still cache metadata and load overlay
+                                                prefs.edit()
+                                                        .putLong("gee_last_check_time_" + plotId, System.currentTimeMillis())
+                                                        .putLong("gee_latest_image_time_" + plotId, latestImageTime)
+                                                        .putString("gee_tile_template_" + plotId, tileUrlTemplate)
+                                                        .putLong("gee_tile_expiry_" + plotId, System.currentTimeMillis() + 2 * 60 * 60 * 1000)
+                                                        .apply();
+                                                
+                                                EarthEngineTileProvider tileProvider = new EarthEngineTileProvider(requireContext(), tileUrlTemplate, singlePlotList, geeClient);
+                                                geeTileOverlay = googleMap.addTileOverlay(new TileOverlayOptions()
+                                                        .tileProvider(tileProvider)
+                                                        .transparency(0.1f));
+                                            });
+                                        }
+                                    });
+                                }
+
+                                @Override
+                                public void onError(String errorMessage) {
+                                    showError(errorMessage);
+                                }
+                            });
+                        }
+                    });
+                }
+
+                @Override
+                public void onError(final String errorMessage) {
+                    if (getActivity() == null) return;
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(getContext(), "Không kết nối được GEE API. Kích hoạt Mock GEE.", Toast.LENGTH_SHORT).show();
+                        triggerMockGeeeMode(selectedPlot);
+                        isGeeLayerActive = false;
+                        binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+                    });
+                }
+            });
+            return;
+        }
+
+        // Case 3: Within check interval but the template url is expired (we reuse the cached image timestamp,
+        // and fetch a new session from GEE without clearing the cache)
+        Toast.makeText(getContext(), "Đang mở phiên bản đồ GEE cho ảnh vệ tinh chụp ngày " + formatDate(cachedLatestImageTime) + "...", Toast.LENGTH_SHORT).show();
+        
+        geeClient.getNdviTileUrl(singlePlotList, finalMinLat - 0.01, finalMinLng - 0.01, finalMaxLat + 0.01, finalMaxLng + 0.01, new EarthEngineClient.Callback() {
+            @Override
+            public void onSuccess(final String tileUrlTemplate) {
+                if (getActivity() == null) return;
+                getActivity().runOnUiThread(() -> {
+                    if (!isGeeLayerActive) return;
+                    
+                    // Save new template (valid for 2 hours)
+                    prefs.edit()
+                            .putString("gee_tile_template_" + plotId, tileUrlTemplate)
+                            .putLong("gee_tile_expiry_" + plotId, System.currentTimeMillis() + 2 * 60 * 60 * 1000)
+                            .apply();
+                    
+                    EarthEngineTileProvider tileProvider = new EarthEngineTileProvider(requireContext(), tileUrlTemplate, singlePlotList, geeClient);
+                    geeTileOverlay = googleMap.addTileOverlay(new TileOverlayOptions()
+                            .tileProvider(tileProvider)
+                            .transparency(0.1f));
+                    
+                    Toast.makeText(getContext(), "Đã nạp bản đồ lưu cục bộ từ GEE!", Toast.LENGTH_SHORT).show();
+                    updatePlotSelectionDetails(selectedPlot);
+                });
+            }
+
+            @Override
+            public void onError(final String errorMessage) {
+                showError(errorMessage);
+            }
+        });
     }
 
-    private class EarthEngineCallback implements EarthEngineClient.Callback {
-        private final List<Plot> plotsList;
-
-        public EarthEngineCallback(List<Plot> plots) {
-            this.plotsList = plots;
+    private void triggerMockGeeeMode(Plot plot) {
+        if (plot == null) return;
+        double mockNdvi = 0.5 + (Math.abs(plot.getName().hashCode()) % 36) / 100.0; // Stable between 0.50 and 0.85
+        String healthStatus = "GOOD";
+        if (mockNdvi < 0.5) {
+            healthStatus = "DANGER";
+        } else if (mockNdvi < 0.7) {
+            healthStatus = "WARNING";
         }
+        plot.setAvgNdvi(mockNdvi);
+        plot.setHealthStatus(healthStatus);
+        
+        new Thread(() -> {
+            db.plotDao().update(plot);
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    Toast.makeText(getContext(), "Chế độ Mock GEE: Đã giả lập NDVI ranh giới lô đất!", Toast.LENGTH_SHORT).show();
+                    updatePlotSelectionDetails(plot);
+                    reloadMapData();
+                });
+            }
+        }).start();
+    }
 
-        @Override
-        public void onSuccess(final String tileUrlTemplate) {
-            if (getActivity() == null) return;
-            getActivity().runOnUiThread(() -> {
-                if (!isGeeLayerActive) return; // double check
-
-                EarthEngineTileProvider tileProvider = new EarthEngineTileProvider(tileUrlTemplate, plotsList, geeClient);
-                
-                geeTileOverlay = googleMap.addTileOverlay(new TileOverlayOptions()
-                        .tileProvider(tileProvider)
-                        .transparency(0.1f));
-                
-                Toast.makeText(getContext(), "Đã nạp bản đồ Sentinel-2 NDVI từ GEE!", Toast.LENGTH_SHORT).show();
-            });
-        }
-
-        @Override
-        public void onError(final String errorMessage) {
-            if (getActivity() == null) return;
-            getActivity().runOnUiThread(() -> {
-                isGeeLayerActive = false;
-                binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
-                Toast.makeText(getContext(), "Lỗi kết nối GEE: " + errorMessage, Toast.LENGTH_LONG).show();
-            });
-        }
+    private void showError(String message) {
+        isGeeLayerActive = false;
+        binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+        Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();
+        updatePlotSelectionDetails(selectedPlot);
     }
 
     // --- Dynamic Details Display ---
+
+    private void updatePlotSelectionDetails(Plot plot) {
+        if (plot == null) return;
+        int cropCount = db.cropDao().getCropCountForPlot(plot.getId());
+        String details = String.format("Diện tích: %.1f m² | Số lượng: %d cây", plot.getAreaSquareMeters(), cropCount);
+        if (plot.getAvgNdvi() > 0) {
+            details += String.format(" | NDVI: %.2f", plot.getAvgNdvi());
+        }
+        if (isGeeLayerActive) {
+            android.content.SharedPreferences prefs = requireContext().getSharedPreferences("gee_cache", android.content.Context.MODE_PRIVATE);
+            long cachedLatestImageTime = prefs.getLong("gee_latest_image_time_" + plot.getId(), 0);
+            if (cachedLatestImageTime > 0) {
+                details += " | Ảnh vệ tinh: " + formatDate(cachedLatestImageTime);
+            } else {
+                details += " | Ảnh vệ tinh: Đang tải...";
+            }
+        }
+        binding.txtSelectionDetails.setText(details);
+    }
 
     private void showSelectedPlot(Plot plot) {
         selectedPlot = plot;
         selectedCrop = null;
 
-        int cropCount = db.cropDao().getCropCountForPlot(plot.getId());
-
         binding.selectionPanel.setVisibility(View.VISIBLE);
         binding.txtSelectionTitle.setText(plot.getName());
-        binding.txtSelectionDetails.setText(String.format("Diện tích: %.1f m² | Số lượng: %d cây", plot.getAreaSquareMeters(), cropCount));
+        updatePlotSelectionDetails(plot);
         
         binding.txtSelectionStatus.setText("LÔ ĐẤT");
         binding.txtSelectionStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.primary));
@@ -664,6 +902,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private String formatDate(long timestamp) {
-        return android.text.format.DateFormat.format("dd/MM/yyyy", new java.util.Date(timestamp)).toString();
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault());
+        return sdf.format(new java.util.Date(timestamp));
     }
 }

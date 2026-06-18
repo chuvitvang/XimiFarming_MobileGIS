@@ -69,13 +69,13 @@ public class PlotDetailActivity extends AppCompatActivity {
 
         // Bind health state
         int color = ContextCompat.getColor(this, R.color.health_good);
-        String statusText = "Tốt (NDVI " + plot.getAvgNdvi() + ")";
+        String statusText = String.format("Tốt (NDVI %.2f)", plot.getAvgNdvi());
         if ("WARNING".equals(plot.getHealthStatus())) {
             color = ContextCompat.getColor(this, R.color.health_warning);
-            statusText = "Cần theo dõi (NDVI " + plot.getAvgNdvi() + ")";
+            statusText = String.format("Cần theo dõi (NDVI %.2f)", plot.getAvgNdvi());
         } else if ("DANGER".equals(plot.getHealthStatus())) {
             color = ContextCompat.getColor(this, R.color.health_danger);
-            statusText = "Cảnh báo nguy cơ (NDVI " + plot.getAvgNdvi() + ")";
+            statusText = String.format("Cảnh báo nguy cơ (NDVI %.2f)", plot.getAvgNdvi());
         }
         binding.txtDetailPlotStatus.setText(statusText);
         binding.txtDetailPlotStatus.setTextColor(color);
@@ -175,7 +175,8 @@ public class PlotDetailActivity extends AppCompatActivity {
             }
 
             private String formatDate(long timestamp) {
-                return android.text.format.DateFormat.format("dd/MM/yyyy", new java.util.Date(timestamp)).toString();
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault());
+                return sdf.format(new java.util.Date(timestamp));
             }
         }
     }

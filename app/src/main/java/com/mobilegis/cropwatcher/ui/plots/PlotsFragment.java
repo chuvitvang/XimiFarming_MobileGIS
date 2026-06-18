@@ -132,15 +132,15 @@ public class PlotsFragment extends Fragment {
                 if ("GOOD".equals(plot.getHealthStatus())) {
                     indicatorColor = ContextCompat.getColor(context, R.color.health_good);
                     binding.txtNdviBadge.setTextColor(indicatorColor);
-                    binding.txtNdviBadge.getRootView().setBackgroundColor(Color.parseColor("#E8F5E9"));
+                    binding.cardNdviBadge.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
                 } else if ("WARNING".equals(plot.getHealthStatus())) {
                     indicatorColor = ContextCompat.getColor(context, R.color.health_warning);
                     binding.txtNdviBadge.setTextColor(indicatorColor);
-                    binding.txtNdviBadge.getRootView().setBackgroundColor(Color.parseColor("#FFF3E0"));
+                    binding.cardNdviBadge.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
                 } else {
                     indicatorColor = ContextCompat.getColor(context, R.color.health_danger);
                     binding.txtNdviBadge.setTextColor(indicatorColor);
-                    binding.txtNdviBadge.getRootView().setBackgroundColor(Color.parseColor("#FFEBEE"));
+                    binding.cardNdviBadge.setCardBackgroundColor(Color.parseColor("#FFEBEE"));
                 }
                 binding.viewStatusIndicator.setBackgroundColor(indicatorColor);
 
