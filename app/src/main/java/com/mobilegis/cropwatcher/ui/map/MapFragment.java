@@ -116,8 +116,77 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         });
 
-        // Toggle GEE Layer
-        binding.btnToggleGee.setOnClickListener(v -> toggleGeeNdviLayer());
+        // Toggle Layers Menu Popup
+        binding.btnLayersToggle.setOnClickListener(v -> {
+            if (binding.cardMapLayers.getVisibility() == View.VISIBLE) {
+                binding.cardMapLayers.setVisibility(View.GONE);
+            } else {
+                binding.cardMapLayers.setVisibility(View.VISIBLE);
+            }
+        });
+
+        // Layer selection: Satellite
+        binding.laySatellite.setOnClickListener(v -> {
+            isGeeLayerActive = false;
+            if (geeTileOverlay != null) {
+                geeTileOverlay.remove();
+                geeTileOverlay = null;
+            }
+            if (googleMap != null) {
+                googleMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+            }
+            binding.cardMapLayers.setVisibility(View.GONE);
+            Toast.makeText(getContext(), "Đã bật lớp Ảnh Vệ Tinh", Toast.LENGTH_SHORT).show();
+            // Reset layers button tint to white
+            binding.btnLayersToggle.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+            binding.btnLayersToggle.setImageTintList(ContextCompat.getColorStateList(requireContext(), R.color.primary));
+            if (selectedPlot != null) {
+                updatePlotSelectionDetails(selectedPlot);
+            }
+        });
+
+        // Layer selection: NDVI
+        binding.layNdvi.setOnClickListener(v -> {
+            isGeeLayerActive = true;
+            if (googleMap != null) {
+                googleMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+            }
+            binding.cardMapLayers.setVisibility(View.GONE);
+            loadGeeOverlay();
+            // Highlight layers button tint to green
+            binding.btnLayersToggle.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.primary));
+            binding.btnLayersToggle.setImageTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+        });
+
+        // Custom Zoom In/Out
+        binding.btnZoomIn.setOnClickListener(v -> {
+            if (googleMap != null) {
+                googleMap.animateCamera(CameraUpdateFactory.zoomIn());
+            }
+        });
+
+        binding.btnZoomOut.setOnClickListener(v -> {
+            if (googleMap != null) {
+                googleMap.animateCamera(CameraUpdateFactory.zoomOut());
+            }
+        });
+
+        // Custom My Location
+        binding.btnMyLocation.setOnClickListener(v -> {
+            if (googleMap != null) {
+                if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    android.location.Location myLoc = googleMap.getMyLocation();
+                    if (myLoc != null) {
+                        LatLng latLng = new LatLng(myLoc.getLatitude(), myLoc.getLongitude());
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+                    } else {
+                        Toast.makeText(getContext(), "Đang tìm tín hiệu GPS...", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
+                }
+            }
+        });
 
         // Close Selection Card
         binding.btnSelectionClose.setOnClickListener(v -> hideSelectionCard());
@@ -128,8 +197,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 Intent intent = new Intent(getActivity(), PlotDetailActivity.class);
                 intent.putExtra("PLOT_ID", selectedPlot.getId());
                 startActivity(intent);
+            } else if (selectedCrop != null) {
+                Intent intent = new Intent(getActivity(), com.mobilegis.cropwatcher.ui.crops.CropDetailActivity.class);
+                intent.putExtra("CROP_ID", selectedCrop.getId());
+                startActivity(intent);
             }
         });
+
+        binding.btnHeaderSearch.setOnClickListener(v -> Toast.makeText(getContext(), "Chức năng tìm kiếm sẽ khả dụng trong phiên bản sau", Toast.LENGTH_SHORT).show());
+        binding.btnHeaderNotify.setOnClickListener(v -> Toast.makeText(getContext(), "Không có thông báo mới", Toast.LENGTH_SHORT).show());
+        binding.btnHeaderProfile.setOnClickListener(v -> Toast.makeText(getContext(), "Thông tin tài khoản XimiFarming", Toast.LENGTH_SHORT).show());
     }
 
     @Override
@@ -137,8 +214,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         this.googleMap = map;
         
         // Setup Map settings
-        googleMap.getUiSettings().setZoomControlsEnabled(true);
+        googleMap.getUiSettings().setZoomControlsEnabled(false);
         googleMap.getUiSettings().setCompassEnabled(true);
+        googleMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
         
         // Center camera in Ho Chi Minh City/Vietnam default agricultural zone
         LatLng defaultLoc = new LatLng(10.8231, 106.6297);
@@ -189,75 +267,79 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void reloadMapData() {
         if (googleMap == null) return;
 
-        // Clear existing overlays
-        for (Polygon p : activePolygons) p.remove();
-        activePolygons.clear();
-        
-        for (Marker m : activeCropMarkers) m.remove();
-        activeCropMarkers.clear();
+        new Thread(() -> {
+            final List<Plot> plots = db.plotDao().getAllPlots();
+            final List<Crop> crops = db.cropDao().getAllCrops();
 
-        // Load Plots from Room
-        List<Plot> plots = db.plotDao().getAllPlots();
-        for (Plot plot : plots) {
-            List<LatLng> pts = parsePoints(plot.getCoordinatesJson());
-            if (pts.size() < 3) continue;
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    if (googleMap == null) return;
 
-            // Health color mapping
-            int fillColor;
-            int strokeColor;
-            if ("GOOD".equals(plot.getHealthStatus())) {
-                fillColor = Color.argb(60, 46, 125, 50); // Semi-trans Green
-                strokeColor = Color.rgb(46, 125, 50);
-            } else if ("WARNING".equals(plot.getHealthStatus())) {
-                fillColor = Color.argb(60, 239, 108, 0); // Orange
-                strokeColor = Color.rgb(239, 108, 0);
-            } else {
-                fillColor = Color.argb(60, 198, 40, 40); // Red
-                strokeColor = Color.rgb(198, 40, 40);
+                    // Clear existing overlays
+                    for (Polygon p : activePolygons) p.remove();
+                    activePolygons.clear();
+                    
+                    for (Marker m : activeCropMarkers) m.remove();
+                    activeCropMarkers.clear();
+
+                    // Load Plots
+                    for (Plot plot : plots) {
+                        List<LatLng> pts = parsePoints(plot.getCoordinatesJson());
+                        if (pts.size() < 3) continue;
+
+                        // Health color mapping
+                        int fillColor;
+                        int strokeColor;
+                        if ("GOOD".equals(plot.getHealthStatus())) {
+                            fillColor = Color.argb(60, 46, 125, 50); // Semi-trans Green
+                            strokeColor = Color.rgb(46, 125, 50);
+                        } else if ("WARNING".equals(plot.getHealthStatus())) {
+                            fillColor = Color.argb(60, 239, 108, 0); // Orange
+                            strokeColor = Color.rgb(239, 108, 0);
+                        } else {
+                            fillColor = Color.argb(60, 198, 40, 40); // Red
+                            strokeColor = Color.rgb(198, 40, 40);
+                        }
+
+                        Polygon polygon = googleMap.addPolygon(new PolygonOptions()
+                                .addAll(pts)
+                                .strokeColor(strokeColor)
+                                .strokeWidth(5)
+                                .fillColor(fillColor)
+                                .clickable(true));
+                        
+                        polygon.setTag(plot);
+                        activePolygons.add(polygon);
+                    }
+
+                    // Load Crops
+                    for (Crop crop : crops) {
+                        LatLng pos = new LatLng(crop.getLatitude(), crop.getLongitude());
+                        
+                        // Custom marker colors depending on crop status
+                        float hue;
+                        if ("HEALTHY".equals(crop.getStatus())) {
+                            hue = BitmapDescriptorFactory.HUE_GREEN;
+                        } else if ("STRESSED".equals(crop.getStatus())) {
+                            hue = BitmapDescriptorFactory.HUE_ORANGE;
+                        } else {
+                            hue = BitmapDescriptorFactory.HUE_RED;
+                        }
+
+                        Marker marker = googleMap.addMarker(new MarkerOptions()
+                                .position(pos)
+                                .title(crop.getName())
+                                .snippet("Loại: " + crop.getType())
+                                .icon(BitmapDescriptorFactory.defaultMarker(hue)));
+                        
+                        if (marker != null) {
+                            marker.setTag(crop);
+                            activeCropMarkers.add(marker);
+                        }
+                    }
+                });
             }
-
-            Polygon polygon = googleMap.addPolygon(new PolygonOptions()
-                    .addAll(pts)
-                    .strokeColor(strokeColor)
-                    .strokeWidth(5)
-                    .fillColor(fillColor)
-                    .clickable(true));
-            
-            polygon.setTag(plot);
-            activePolygons.add(polygon);
-        }
-
-        // Load Crops from Room
-        List<Crop> crops = db.cropDao().getAllCrops();
-        for (Crop crop : crops) {
-            LatLng pos = new LatLng(crop.getLatitude(), crop.getLongitude());
-            
-            // Custom marker colors depending on crop status
-            float hue;
-            if ("HEALTHY".equals(crop.getStatus())) {
-                hue = BitmapDescriptorFactory.HUE_GREEN;
-            } else if ("STRESSED".equals(crop.getStatus())) {
-                hue = BitmapDescriptorFactory.HUE_ORANGE;
-            } else {
-                hue = BitmapDescriptorFactory.HUE_RED;
-            }
-
-            Marker marker = googleMap.addMarker(new MarkerOptions()
-                    .position(pos)
-                    .title(crop.getName())
-                    .snippet("Loại: " + crop.getType())
-                    .icon(BitmapDescriptorFactory.defaultMarker(hue)));
-            
-            if (marker != null) {
-                marker.setTag(crop);
-                activeCropMarkers.add(marker);
-            }
-        }
-        
-        // Refresh GEE Tiles if currently active
-        if (isGeeLayerActive) {
-            loadGeeOverlay();
-        }
+        }).start();
     }
 
     private void checkLocationPermissions() {
@@ -358,65 +440,23 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             // Serialize points to JSON
             String jsonPoints = new Gson().toJson(listCoords);
 
-            // Save to DB
-            Plot newPlot = new Plot(name, desc, jsonPoints, area, "GOOD", 0.65);
-            db.plotDao().insert(newPlot);
-
-            Toast.makeText(getContext(), "Đã lưu lô đất: " + name, Toast.LENGTH_SHORT).show();
-            cancelDrawingMode();
-            reloadMapData();
+            // Save to DB in background
+            final Plot newPlot = new Plot(name, desc, jsonPoints, area, "GOOD", 0.65);
+            final String finalName = name;
+            new Thread(() -> {
+                db.plotDao().insert(newPlot);
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(getContext(), "Đã lưu lô đất: " + finalName, Toast.LENGTH_SHORT).show();
+                        cancelDrawingMode();
+                        reloadMapData();
+                    });
+                }
+            }).start();
         });
 
         builder.setNegativeButton("Hủy", (dialog, which) -> cancelDrawingMode());
         builder.show();
-    }
-
-    // --- Adding Crop Mode Logic ---
-
-
-    private int findPlotForLatLng(LatLng latLng) {
-        // Simple bounding/ray casting algorithm check
-        List<Plot> plots = db.plotDao().getAllPlots();
-        for (Plot plot : plots) {
-            List<LatLng> polygon = parsePoints(plot.getCoordinatesJson());
-            if (containsLocation(latLng, polygon)) {
-                return plot.getId();
-            }
-        }
-        return -1;
-    }
-
-    private boolean containsLocation(LatLng point, List<LatLng> polygon) {
-        int intersectCount = 0;
-        for (int i = 0; i < polygon.size(); i++) {
-            LatLng vertex1 = polygon.get(i);
-            LatLng vertex2 = polygon.get((i + 1) % polygon.size());
-            if (charIntersect(point, vertex1, vertex2)) {
-                intersectCount++;
-            }
-        }
-        return (intersectCount % 2 == 1);
-    }
-
-    private boolean charIntersect(LatLng point, LatLng v1, LatLng v2) {
-        if (v1.longitude > v2.longitude) {
-            LatLng temp = v1; v1 = v2; v2 = temp;
-        }
-        if (point.longitude == v1.longitude || point.longitude == v2.longitude) {
-            point = new LatLng(point.latitude, point.longitude + 0.00001);
-        }
-        if (point.longitude < v1.longitude || point.longitude > v2.longitude) {
-            return false;
-        }
-        if (point.latitude >= Math.max(v1.latitude, v2.latitude)) {
-            return false;
-        }
-        if (point.latitude < Math.min(v1.latitude, v2.latitude)) {
-            return true;
-        }
-        double red = (point.longitude - v1.longitude) / (v2.longitude - v1.longitude);
-        double blue = v1.latitude + red * (v2.latitude - v1.latitude);
-        return (point.latitude < blue);
     }
 
     private void cancelDrawingMode() {
@@ -438,27 +478,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     // --- GEE Integration Overlay logic ---
 
-    private void toggleGeeNdviLayer() {
-        if (isGeeLayerActive) {
-            // Remove GEE Layer
-            if (geeTileOverlay != null) {
-                geeTileOverlay.remove();
-                geeTileOverlay = null;
-            }
-            isGeeLayerActive = false;
-            binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
-            Toast.makeText(getContext(), "Đã tắt lớp vệ tinh GEE", Toast.LENGTH_SHORT).show();
-        } else {
-            // Load GEE Layer
-            isGeeLayerActive = true;
-            binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.accent));
-            loadGeeOverlay();
-        }
-        if (selectedPlot != null) {
-            updatePlotSelectionDetails(selectedPlot);
-        }
-    }
-
     private void loadGeeOverlay() {
         if (googleMap == null) return;
         if (geeTileOverlay != null) geeTileOverlay.remove();
@@ -466,7 +485,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         if (selectedPlot == null) {
             Toast.makeText(getContext(), "Vui lòng chạm chọn một lô đất trên bản đồ trước để xem ảnh vệ tinh NDVI!", Toast.LENGTH_LONG).show();
             isGeeLayerActive = false;
-            binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+            binding.btnLayersToggle.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+            binding.btnLayersToggle.setImageTintList(ContextCompat.getColorStateList(requireContext(), R.color.primary));
             return;
         }
 
@@ -494,7 +514,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         List<LatLng> pts = parsePoints(selectedPlot.getCoordinatesJson());
         if (pts.isEmpty()) {
             isGeeLayerActive = false;
-            binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+            binding.btnLayersToggle.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
             Toast.makeText(getContext(), "Không tìm thấy tọa độ của lô đất!", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -675,7 +695,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         Toast.makeText(getContext(), "Không kết nối được GEE API. Kích hoạt Mock GEE.", Toast.LENGTH_SHORT).show();
                         triggerMockGeeeMode(selectedPlot);
                         isGeeLayerActive = false;
-                        binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+                        binding.btnLayersToggle.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
                     });
                 }
             });
@@ -742,7 +762,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private void showError(String message) {
         isGeeLayerActive = false;
-        binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+        binding.btnLayersToggle.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+        binding.btnLayersToggle.setImageTintList(ContextCompat.getColorStateList(requireContext(), R.color.primary));
         Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();
         updatePlotSelectionDetails(selectedPlot);
     }
@@ -751,21 +772,45 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private void updatePlotSelectionDetails(Plot plot) {
         if (plot == null) return;
-        int cropCount = db.cropDao().getCropCountForPlot(plot.getId());
-        String details = String.format("Diện tích: %.1f m² | Số lượng: %d cây", plot.getAreaSquareMeters(), cropCount);
-        if (plot.getAvgNdvi() > 0) {
-            details += String.format(" | NDVI: %.2f", plot.getAvgNdvi());
-        }
-        if (isGeeLayerActive) {
-            android.content.SharedPreferences prefs = requireContext().getSharedPreferences("gee_cache", android.content.Context.MODE_PRIVATE);
-            long cachedLatestImageTime = prefs.getLong("gee_latest_image_time_" + plot.getId(), 0);
-            if (cachedLatestImageTime > 0) {
-                details += " | Ảnh vệ tinh: " + formatDate(cachedLatestImageTime);
-            } else {
-                details += " | Ảnh vệ tinh: Đang tải...";
+        
+        // Populate Grid Details
+        binding.txtGridName.setText(plot.getName());
+        
+        double ha = plot.getAreaSquareMeters() / 10000.0;
+        binding.txtGridArea.setText(String.format("%.2f Ha", ha));
+        
+        // Get Crop Type
+        new Thread(() -> {
+            List<Crop> crops = db.cropDao().getCropsForPlot(plot.getId());
+            String cropText = "Không có cây";
+            if (!crops.isEmpty()) {
+                cropText = crops.get(0).getType();
             }
+            final String finalCropText = cropText;
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    binding.txtGridCrop.setText(finalCropText);
+                });
+            }
+        }).start();
+        
+        // Health Status translation
+        String statusText = "Bình thường";
+        int statusColor = ContextCompat.getColor(requireContext(), R.color.health_good);
+        if ("WARNING".equals(plot.getHealthStatus())) {
+            statusText = "Cần theo dõi";
+            statusColor = ContextCompat.getColor(requireContext(), R.color.health_warning);
+        } else if ("DANGER".equals(plot.getHealthStatus())) {
+            statusText = "Cảnh báo";
+            statusColor = ContextCompat.getColor(requireContext(), R.color.health_danger);
         }
-        binding.txtSelectionDetails.setText(details);
+        binding.txtGridStatus.setText(statusText);
+        binding.txtGridStatus.setTextColor(statusColor);
+        
+        // Bind NDVI mini chart
+        List<Float> ndviHistory = java.util.Arrays.asList(0.58f, 0.62f, 0.60f, 0.68f, 0.72f, (float) plot.getAvgNdvi());
+        List<String> dates = java.util.Arrays.asList("15/04", "22/04", "29/04", "06/05", "13/05", "20/05");
+        binding.ndviMiniChart.setData(ndviHistory, dates);
     }
 
     private void showSelectedPlot(Plot plot) {
@@ -774,11 +819,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         binding.selectionPanel.setVisibility(View.VISIBLE);
         binding.txtSelectionTitle.setText(plot.getName());
-        updatePlotSelectionDetails(plot);
         
-        binding.txtSelectionStatus.setText("LÔ ĐẤT");
-        binding.txtSelectionStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.primary));
+        // Reset layout visibility and labels to Plot context
+        binding.layoutChartWeather.setVisibility(View.VISIBLE);
+        binding.txtLabelName.setText("Tên Ô Đất");
+        binding.txtLabelArea.setText("Diện Tích");
+        binding.txtLabelCrop.setText("Cây Trồng");
+        binding.txtLabelStatus.setText("Hiện Trạng");
+        
         binding.btnSelectionAction.setText("Xem Chi Tiết Lô Đất");
+        
+        updatePlotSelectionDetails(plot);
 
         // Dynamic reload GEE layer for this specific plot if the layer is active
         if (isGeeLayerActive) {
@@ -792,16 +843,30 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         binding.selectionPanel.setVisibility(View.VISIBLE);
         binding.txtSelectionTitle.setText(crop.getName());
-        binding.txtSelectionDetails.setText(String.format("Loại: %s | Ngày trồng: %s", crop.getType(), formatDate(crop.getPlantingDate())));
         
-        binding.txtSelectionStatus.setText(crop.getStatus());
-        if ("HEALTHY".equals(crop.getStatus())) {
-            binding.txtSelectionStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.health_good));
-        } else if ("STRESSED".equals(crop.getStatus())) {
-            binding.txtSelectionStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.health_warning));
-        } else {
-            binding.txtSelectionStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.health_danger));
+        // Hide NDVI trend and weather layout for crops
+        binding.layoutChartWeather.setVisibility(View.GONE);
+        
+        // Relabel grid titles for crop context
+        binding.txtLabelName.setText("Tên Cây");
+        binding.txtGridName.setText(crop.getName());
+        
+        binding.txtLabelArea.setText("Loại Cây");
+        binding.txtGridArea.setText(crop.getType());
+        
+        binding.txtLabelCrop.setText("Ngày Trồng");
+        binding.txtGridCrop.setText(formatDate(crop.getPlantingDate()));
+        
+        binding.txtLabelStatus.setText("Tình Trạng");
+        String statusText = crop.getStatus();
+        int statusColor = ContextCompat.getColor(requireContext(), R.color.health_good);
+        if ("STRESSED".equals(crop.getStatus())) {
+            statusColor = ContextCompat.getColor(requireContext(), R.color.health_warning);
+        } else if ("DISEASED".equals(crop.getStatus())) {
+            statusColor = ContextCompat.getColor(requireContext(), R.color.health_danger);
         }
+        binding.txtGridStatus.setText(statusText);
+        binding.txtGridStatus.setTextColor(statusColor);
         
         binding.btnSelectionAction.setText("Xem Chi Tiết Cây");
         binding.btnSelectionAction.setOnClickListener(v -> {
@@ -823,7 +888,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 geeTileOverlay = null;
             }
             isGeeLayerActive = false;
-            binding.btnToggleGee.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+            binding.btnLayersToggle.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
+            binding.btnLayersToggle.setImageTintList(ContextCompat.getColorStateList(requireContext(), R.color.primary));
         }
     }
 

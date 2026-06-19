@@ -9,11 +9,15 @@ import androidx.fragment.app.FragmentManager;
 import com.mobilegis.cropwatcher.databinding.ActivityMainBinding;
 import com.mobilegis.cropwatcher.ui.map.MapFragment;
 import com.mobilegis.cropwatcher.ui.plots.PlotsFragment;
+import com.mobilegis.cropwatcher.ui.tasks.TasksFragment;
+import com.mobilegis.cropwatcher.ui.alerts.AlertsFragment;
 
 public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
     private final Fragment mapFragment = new MapFragment();
     private final Fragment plotsFragment = new PlotsFragment();
+    private final Fragment tasksFragment = new TasksFragment();
+    private final Fragment alertsFragment = new AlertsFragment();
     private final FragmentManager fm = getSupportFragmentManager();
     private Fragment activeFragment = mapFragment;
 
@@ -24,6 +28,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         // Initialize bottom navigation and fragment manager
+        fm.beginTransaction().add(R.id.fragment_container, alertsFragment, "4").hide(alertsFragment).commit();
+        fm.beginTransaction().add(R.id.fragment_container, tasksFragment, "3").hide(tasksFragment).commit();
         fm.beginTransaction().add(R.id.fragment_container, plotsFragment, "2").hide(plotsFragment).commit();
         fm.beginTransaction().add(R.id.fragment_container, mapFragment, "1").commit();
 
@@ -39,6 +45,14 @@ public class MainActivity extends AppCompatActivity {
                 fm.beginTransaction().hide(activeFragment).show(plotsFragment).commit();
                 activeFragment = plotsFragment;
                 ((PlotsFragment) plotsFragment).loadPlotsData();
+                return true;
+            } else if (itemId == R.id.nav_tasks) {
+                fm.beginTransaction().hide(activeFragment).show(tasksFragment).commit();
+                activeFragment = tasksFragment;
+                return true;
+            } else if (itemId == R.id.nav_alerts) {
+                fm.beginTransaction().hide(activeFragment).show(alertsFragment).commit();
+                activeFragment = alertsFragment;
                 return true;
             }
             return false;

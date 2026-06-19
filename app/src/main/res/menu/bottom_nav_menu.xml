@@ -6,6 +6,14 @@
         android:title="Bản đồ" />
     <item
         android:id="@+id/nav_plots"
-        android:icon="@android:drawable/ic_menu_myplaces"
-        android:title="Lô đất" />
+        android:icon="@android:drawable/ic_menu_compass"
+        android:title="Phân tích" />
+    <item
+        android:id="@+id/nav_tasks"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="Nhiệm vụ" />
+    <item
+        android:id="@+id/nav_alerts"
+        android:icon="@android:drawable/ic_popup_reminder"
+        android:title="Cảnh báo" />
 </menu>
