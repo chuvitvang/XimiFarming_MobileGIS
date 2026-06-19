@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XimiFarming MobileGIS - Bài Thuyết Trình Chi Tiết</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+            margin-bottom: 5px;
+        }
+        
+        .content {
+            padding: 50px 40px;
+        }
+        
+        .section {
+            margin-bottom: 50px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        .section-title {
+            font-size: 2em;
+            color: #667eea;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-title::before {
+            content: '';
+            width: 5px;
+            height: 30px;
+            background: #667eea;
+            border-radius: 3px;
+        }
+        
+        .subsection-title {
+            font-size: 1.3em;
+            color: #764ba2;
+            margin: 25px 0 15px 0;
+            font-weight: 600;
+        }
+        
+        .subsection-title::before {
+            content: '⚙ ';
+            color: #667eea;
+        }
+        
+        .text-content {
+            font-size: 1em;
+            line-height: 1.8;
+            color: #555;
+            margin-bottom: 15px;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border-left: 4px solid #667eea;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .highlight-box strong {
+            color: #667eea;
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+        }
+        
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            line-height: 1.4;
+            font-size: 0.9em;
+        }
+        
+        .code-label {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .feature-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .feature-card h3 {
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .feature-card p {
+            font-size: 0.95em;
+            opacity: 0.95;
+        }
+        
+        .diagram {
+            background: #f9f9f9;
+            border: 2px solid #e0e0e0;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+        
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .tech-item {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .tech-item strong {
+            color: #667eea;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .tech-item p {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .benefits-list {
+            list-style: none;
+            margin: 15px 0;
+        }
+        
+        .benefits-list li {
+            padding: 10px 0 10px 30px;
+            position: relative;
+            margin-bottom: 8px;
+        }
+        
+        .benefits-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .formula {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border: 1px solid #e0e0e0;
+            text-align: center;
+            font-size: 1.05em;
+        }
+        
+        .footer {
+            background: #f5f5f5;
+            padding: 30px 40px;
+            text-align: center;
+            color: #888;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .print-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1em;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .print-button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .print-button {
+                display: none;
+            }
+            .section {
+                page-break-inside: avoid;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            .section-title {
+                font-size: 1.5em;
+            }
+            .content {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌾 XimiFarming MobileGIS</h1>
+            <p>Ứng dụng Di động GIS Quản lý Lô đất & Theo dõi Sức khỏe Cây trồng Thông minh</p>
+            <p style="margin-top: 20px; font-size: 0.9em; opacity: 0.9;">Android (Java) | Cloud GIS | Satellite Analytics | Offline-First Architecture</p>
+        </div>
+        
+        <div class="content">
+            
+            <!-- 1. OVERVIEW -->
+            <div class="section">
+                <div class="section-title">📋 Tổng Quan Dự Án</div>
+                
+                <div class="text-content">
+                    <p><strong>XimiFarming MobileGIS</strong> là một ứng dụng di động tiên tiến được xây dựng trên nền tảng <strong>Android (Java)</strong>, thiết kế đặc biệt để phục vụ ngành nông nghiệp thông minh. Ứng dụng kết hợp công nghệ định vị địa lý (GIS), xử lý ảnh vệ tinh, và trí tuệ nhân tạo để giúp nông dân quản lý đất đai hiệu quả và theo dõi sức khỏe cây trồng một cách khoa học.</p>
+                </div>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3>🗺️ Quản lý Không gian</h3>
+                        <p>Phân chia ranh giới thửa đất, tính diện tích tự động, và quản lý vị trí gốc cây</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🛰️ Ảnh Vệ tinh</h3>
+                        <p>Tích hợp Google Earth Engine để phân tích chỉ số NDVI từ ảnh Sentinel-2</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🔍 Phân tích Lá cây</h3>
+                        <p>Thuật toán ExG để chẩn đoán sâu bệnh và thiếu chất dinh dưỡng</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>☁️ Đồng bộ Cloud</h3>
+                        <p>Supabase + PostgreSQL/PostGIS cho đồng bộ hóa dữ liệu realtime</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>📱 Offline-First</h3>
+                        <p>Hoạt động ngoại tuyến, tự động đồng bộ khi có mạng</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🔐 Bảo mật</h3>
+                        <p>Xác thực Supabase, mã hóa dữ liệu, RLS cho dữ liệu người dùng</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 2. ARCHITECTURE -->
+            <div class="section">
+                <div class="section-title">🏗️ Kiến trúc Hệ Thống</div>
+                
+                <div class="text-content">
+                    Hệ thống tuân thủ mô hình <strong>Offline-First</strong> hiện đại:</div>
+                
+                <div class="diagram">
+                    <div class="mermaid">
+                        graph TD
+                            User["👤 Người dùng"] <--> UI["📱 UI/Activity<br/>Fragment"]
+                            UI <--> RoomDB["💾 Room SQLite<br/>Local DB"]
+                            UI <--> ExG["🖼️ ExG Processor<br/>Bitmap"]
+                            UI <-->|REST API| Auth["🔐 Supabase<br/>Authentication"]
+                            UI <-->|OAuth2| GEE["🛰️ Google Earth<br/>Engine API"]
+                            UI <-->|Sync Engine| SupaDB["☁️ Supabase<br/>PostgreSQL + PostGIS"]
+                            GEE -->|Sentinel-2| Tiles["🎴 NDVI Tile<br/>Provider"]
+                            Tiles -->|LruCache| UI
+                            SupaDB -->|ST_Area| Calc["📐 Area<br/>Calculator"]
+                    </div>
+                </div>
+                
+                <div class="subsection-title">Đặc điểm Kiến trúc:</div>
+                <ul class="benefits-list">
+                    <li><strong>Single Source of Truth:</strong> Room SQLite là nguồn dữ liệu chính cho giao diện</li>
+                    <li><strong>Background Sync:</strong> Tiến trình đồng bộ chạy nền đẩy/kéo dữ liệu từ cloud</li>
+                    <li><strong>Hybrid Storage:</strong> Local Room (không gian địa lý dạng JSON) + Cloud PostGIS (kiểu dữ liệu không gian)</li>
+                    <li><strong>Distributed Processing:</strong> Xử lý ảnh cục bộ (ExG) + xử lý cloud (NDVI qua GEE)</li>
+                </ul>
+            </div>
+            
+            <!-- 3. PROJECT STRUCTURE -->
+            <div class="section">
+                <div class="section-title">📁 Cấu Trúc Thư Mục & Package</div>
+                
+                <div class="text-content">
+                    Mã nguồn Java được tổ chức khoa học theo mô hình <strong>Clean Architecture</strong>:</div>
+                
+                <pre class="code-label">Package Structure: com.mobilegis.ximifarming</pre>
+                <pre>├── MainActivity.java                    # Activity chính, quản lý vòng đời
+│
+├── data/                                # Quản trị DB cục bộ (Room)
+│   ├── AppDatabase.java                 # Database holder, Migration
+│   ├── dao/                             # Data Access Objects
+│   │   ├── CropDao.java                 # Truy vấn bảng Crop
+│   │   ├── CropLogDao.java              # Truy vấn nhật ký cây
+│   │   └── PlotDao.java                 # Truy vấn bảng Plot (thửa đất)
+│   └── entity/                          # Room Entity Models
+│       ├── Crop.java                    # Thực thể cây trồng
+│       ├── CropLog.java                 # Thực thể nhật ký
+│       └── Plot.java                    # Thực thể lô đất
+│
+├── gee/                                 # Google Earth Engine
+│   ├── EarthEngineClient.java           # JWT Auth, tính NDVI
+│   └── EarthEngineTileProvider.java     # Quản lý tiles NDVI, LruCache
+│
+├── supabase/                            # Cloud Sync & Auth
+│   └── SupabaseClient.java              # API REST, Sync 2 chiều
+│
+├── ui/                                  # Giao diện người dùng
+│   ├── alerts/
+│   │   └── AlertsFragment.java          # Tab cảnh báo
+│   ├── auth/
+│   │   └── LoginActivity.java           # Màn hình đăng nhập
+│   ├── components/
+│   │   └── CustomChartView.java         # Biểu đồ NDVI
+│   ├── crops/
+│   │   └── CropDetailActivity.java      # Chi tiết cây trồng
+│   ├── map/
+│   │   └── MapFragment.java             # Bản đồ Google Maps
+│   ├── plots/
+│   │   ├── PlotDetailActivity.java      # Chi tiết lô đất
+│   │   └── PlotsFragment.java           # Danh sách lô đất
+│   └── tasks/
+│       └── TasksFragment.java           # Quản lý công việc
+│
+└── utils/                               # Hỗ trợ
+    └── GisHelper.java                   # Tính diện tích, chuyển đổi tọa độ</pre>
+
+                <div class="highlight-box">
+                    <strong>📌 Điểm Cốt Lõi:</strong> Mỗi package đảm nhiệm một vai trò rõ ràng, dễ bảo trì và mở rộng. Mô hình này cho phép team phát triển song song các tính năng độc lập.
+                </div>
+            </div>
+            
+            <!-- 4. DATABASE DESIGN -->
+            <div class="section">
+                <div class="section-title">💾 Thiết Kế Cơ Sở Dữ Liệu Không Gian</div>
+                
+                <div class="subsection-title">4.1 Cơ sở dữ liệu Cục bộ (Room SQLite)</div>
+                <div class="text-content">
+                    SQLite không hỗ trợ kiểu dữ liệu không gian phức tạp, nên dữ liệu hình học được lưu dưới dạng <strong>JSON Text</strong>:
+                </div>
+                
+                <div class="highlight-box">
+                    <strong>📍 Plot (Thửa đất):</strong> Tọa độ ranh giới được lưu trong <code>coordinatesJson</code> dạng mảng JSON các đỉnh đa giác<br/>
+                    <strong>🌱 Crop (Cây trồng):</strong> Vị trí được lưu trong hai trường <code>latitude</code> và <code>longitude</code>
+                </div>
+                
+                <pre><span class="code-label">Ví dụ: Plot coordinatesJson</span>
+[
+  {"latitude": 10.5, "longitude": 105.3},
+  {"latitude": 10.5, "longitude": 105.4},
+  {"latitude": 10.6, "longitude": 105.4},
+  {"latitude": 10.6, "longitude": 105.3}
+]</pre>
+                
+                <div class="subsection-title">4.2 Cơ sở dữ liệu Cloud (Supabase PostgreSQL + PostGIS)</div>
+                <div class="text-content">
+                    Khi đẩy lên cloud, PostgreSQL sử dụng extension <strong>PostGIS</strong> để hỗ trợ kiểu dữ liệu không gian thực thụ:
+                </div>
+                
+                <div class="highlight-box">
+                    <strong>🔲 Bảng Plots:</strong> Trường <code>geom</code> kiểu <code>geometry(Polygon, 4326)</code><br/>
+                    <strong>🔵 Bảng Crops:</strong> Trường <code>geom</code> kiểu <code>geometry(Point, 4326)</code>
+                </div>
+                
+                <pre><span class="code-label">Chuyển đổi Polygon trên Cloud</span>
+ST_GeomFromText(
+  'POLYGON((105.3 10.5, 105.4 10.5, 105.4 10.6, 105.3 10.6, 105.3 10.5))',
+  4326
+)</pre>
+                
+                <div class="subsection-title">4.3 Trigger Tự động Tính Diện Tích</div>
+                <div class="text-content">
+                    Cơ chế trigger trên cloud tự động tính diện tích thửa đất (m²) bằng công thức địa lý WGS84:</div>
+                
+                <pre><span class="code-label">SQL Trigger PostGIS</span>
+CREATE OR REPLACE FUNCTION calculate_plot_area()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.area_sq_meters := ST_Area(NEW.geom::geography);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_calculate_area
+BEFORE INSERT OR UPDATE ON plots
+FOR EACH ROW
+EXECUTE FUNCTION calculate_plot_area();</pre>
+                
+                <div class="subsection-title">4.4 Row Level Security (RLS)</div>
+                <div class="text-content">
+                    Mỗi hàng dữ liệu có cột <code>owner_id</code> liên kết với ID người dùng. RLS đảm bảo mỗi người chỉ nhìn thấy dữ liệu của mình:
+                </div>
+                
+                <pre><span class="code-label">RLS Policy</span>
+CREATE POLICY "Allow owners to manage plots"
+ON plots FOR ALL
+TO authenticated
+USING (owner_id = auth.uid())
+WITH CHECK (owner_id = auth.uid());</pre>
+            </div>
+            
+            <!-- 5. AUTHENTICATION -->
+            <div class="section">
+                <div class="section-title">🔐 Hệ Thống Xác Thực Người Dùng</div>
+                
+                <div class="diagram">
+                    <div class="mermaid">
+                        sequenceDiagram
+                            actor User
+                            participant App as Android App
+                            participant API as Supabase Auth
+                            participant Local as SharedPreferences
+                            User->>App: Nhập email/password
+                            App->>API: POST /auth/v1/signup<br/>hoặc /auth/v1/token
+                            API-->>App: JWT Access Token
+                            App->>Local: Lưu token
+                            Local-->>App: ✓ Saved
+                            App->>App: Chuyển hướng MainActivity
+                    </div>
+                </div>
+                
+                <div class="subsection-title">5.1 Luồng Đăng Ký & Đăng Nhập</div>
+                <ul class="benefits-list">
+                    <li><strong>Sign Up:</strong> POST đến <code>/auth/v1/signup</code> với email/password</li>
+                    <li><strong>Sign In:</strong> POST đến <code>/auth/v1/token?grant_type=password</code></li>
+                    <li><strong>Session Management:</strong> Token được lưu trong <code>SharedPreferences</code></li>
+                    <li><strong>Auto-detect:</strong> MainActivity kiểm tra token khi khởi động</li>
+                </ul>
+                
+                <div class="subsection-title">5.2 Xử Lý Token Hết Hạn (JWT 401)</div>
+                <div class="text-content">
+                    Supabase tokens hết hạn sau 1 giờ. Khi nhận lỗi HTTP 401:
+                </div>
+                
+                <pre><span class="code-label">Handling 401 Unauthorized</span>
+if (responseCode == 401) {
+    // Token hết hạn
+    SharedPreferences pref = getSharedPreferences("XimiFarmingPrefs", MODE_PRIVATE);
+    pref.edit().clear().apply(); // Xóa session
+    SupabaseClient.getInstance().setAccessToken(null);
+    
+    // Chuyển hướng về LoginActivity
+    Toast.makeText(this, "Phiên làm việc hết hạn", Toast.LENGTH_SHORT).show();
+    startActivity(new Intent(this, LoginActivity.class));
+}</pre>
+            </div>
+            
+            <!-- 6. SYNC ENGINE -->
+            <div class="section">
+                <div class="section-title">🔄 Động Cơ Đồng Bộ Hai Chiều (Offline-First)</div>
+                
+                <div class="diagram">
+                    <div class="mermaid">
+                        graph TD
+                            A["🟢 START SYNC"] --> B["📥 PULL từ Cloud"]
+                            B --> C{Bản ghi<br/>Local?}
+                            C -->|Không| D["➕ INSERT mới<br/>isSynced=1"]
+                            C -->|Có| E["🔄 UPDATE dữ liệu<br/>isSynced=1"]
+                            D --> F["📤 PUSH lên Cloud"]
+                            E --> F
+                            F --> G["Quét isSynced=0"]
+                            G --> H["Đẩy các bản ghi<br/>chưa đồng bộ"]
+                            H --> I["🔑 ID Translation<br/>oldId → newId"]
+                            I --> J["🔗 Update FK<br/>tất cả con"]
+                            J --> K["✅ SYNC DONE"]
+                    </div>
+                </div>
+                
+                <div class="subsection-title">6.1 Quá Trình Đồng Bộ</div>
+                <div class="highlight-box">
+                    <strong>Bước 1 - PULL:</strong> Tải Plots & Crops từ Cloud về máy<br/>
+                    <strong>Bước 2 - PUSH:</strong> Đẩy bản ghi có cờ <code>isSynced=false</code> lên Cloud<br/>
+                    <strong>Bước 3 - ID Translation:</strong> Chuyển ID cục bộ sang ID thực tế của Cloud<br/>
+                    <strong>Bước 4 - FK Update:</strong> Cập nhật khóa ngoại của các bản ghi con
+                </div>
+                
+                <div class="subsection-title">6.2 Thuật Toán Dịch Chuyển ID (ID Translation)</div>
+                <div class="text-content">
+                    Vấn đề: Room tạo khóa tự tăng (ví dụ: oldId=1), nhưng Supabase tạo khóa khác (newId=159). Nếu xóa bản ghi cũ, cascade delete sẽ xóa toàn bộ dữ liệu con!
+                </div>
+                
+                <pre><span class="code-label">Giải pháp: Transaction an toàn</span>
+db.runInTransaction(() -> {
+    // 1️⃣ Lưu danh sách đối tượng con
+    List&lt;Crop&gt; crops = db.cropDao().getCropsForPlot(oldPlotId);
+    
+    // 2️⃣ Tạo Plot mới với ID từ Cloud
+    Plot newPlot = new Plot(plot.getName(), ...);
+    newPlot.setId(newSupabaseId);
+    newPlot.setSynced(true);
+    db.plotDao().insert(newPlot);
+    
+    // 3️⃣ Cập nhật FK của toàn bộ con
+    for (Crop c : crops) {
+        c.setPlotId(newSupabaseId);
+        db.cropDao().update(c);
+    }
+    
+    // 4️⃣ Xóa Plot cũ (bây giờ không có con)
+    db.plotDao().delete(plot);
+});</pre>
+                
+                <div class="highlight-box">
+                    <strong>✅ Kết quả:</strong> Toàn vẹn dữ liệu được đảm bảo, không mất dữ liệu con khi đồng bộ.
+                </div>
+            </div>
+            
+            <!-- 7. GOOGLE EARTH ENGINE -->
+            <div class="section">
+                <div class="section-title">🛰️ Tích Hợp Google Earth Engine (GEE)</div>
+                
+                <div class="subsection-title">7.1 Xác Thực OAuth2 qua Service Account</div>
+                <div class="text-content">
+                    Thay vì yêu cầu từng nông dân đăng nhập Google, ứng dụng sử dụng <strong>Service Account</strong>:
+                </div>
+                
+                <div class="highlight-box">
+                    <strong>📄 Service Account Key:</strong> Tệp <code>service_account_key.json</code> chứa Private Key RSA<br/>
+                    <strong>🔑 JWT Generation:</strong> Sinh mã ký JWT, gửi đến <code>https://oauth2.googleapis.com/token</code><br/>
+                    <strong>⏰ Token TTL:</strong> OAuth2 token có thời hạn 3600 giây
+                </div>
+                
+                <pre><span class="code-label">JWT Flow</span>
+Load Service Account Key (RSA Private Key)
+    ↓
+Generate JWT Signature
+    ↓
+POST to oauth2.googleapis.com/token
+    ↓
+Receive OAuth2 Access Token
+    ↓
+Use token to call GEE API</pre>
+                
+                <div class="subsection-title">7.2 Tính Toán NDVI Trung Bình</div>
+                <div class="text-content">
+                    NDVI (Normalized Difference Vegetation Index) được tính từ ảnh Sentinel-2:
+                </div>
+                
+                <div class="formula">
+                    $$\text{NDVI} = \frac{\text{B8 (NIR)} - \text{B4 (Red)}}{\text{B8 (NIR)} + \text{B4 (Red)}}$$
+                </div>
+                
+                <div class="text-content">
+                    Quy trình GEE:
+                </div>
+                
+                <pre><span class="code-label">GEE Calculation Steps</span>
+1️⃣ Lọc chùm ảnh COPERNICUS/S2_SR (Sentinel-2)
+   - Khoảng thời gian: 3 tháng qua
+   - Khoảng không gian: Polygon thửa đất từ Client
+
+2️⃣ Tính NDVI từ Band 8 & Band 4
+
+3️⃣ Reduce Region bằng ee.Reducer.mean()
+
+4️⃣ Trả về 1 giá trị NDVI trung bình duy nhất
+   (ví dụ: 0.65 = cây khỏe mạnh)</pre>
+                
+                <div class="subsection-title">7.3 Tối Ưu Hóa Bản Đồ NDVI (LruCache)</div>
+                <div class="text-content">
+                    Lớp <code>EarthEngineTileProvider</code> quản lý các mảnh ảnh NDVI:
+                </div>
+                
+                <pre><span class="code-label">Tile Caching Strategy</span>
+private static final LruCache&lt;String, byte[]&gt; tileCache = new LruCache&lt;&gt;(128);
+
+key = z + "_" + x + "_" + y  // Khóa dựa vào tọa độ mảnh
+
+Cache Hit ✓  → Trả về byte[] từ RAM (nhanh)
+Cache Miss ✗ → Tải từ đĩa hoặc GEE API → Lưu vào Cache</pre>
+                
+                <div class="highlight-box">
+                    <strong>🎨 Transparency:</strong> Overlay được đặt ở độ trong suốt 35% (0.35f) để cân bằng giữa hiển thị NDVI và ranh giới thửa đất dưới đó.
+                </div>
+            </div>
+            
+            <!-- 8. ExG ALGORITHM -->
+            <div class="section">
+                <div class="section-title">🖼️ Thuật Toán ExG (Excess Green Index)</div>
+                
+                <div class="subsection-title">8.1 Công Thức Toán Học</div>
+                <div class="text-content">
+                    Excess Green Index là chỉ số phổ biến để tách vùng thực vật xanh khỏi nền đất:
+                </div>
+                
+                <div class="formula">
+                    $$\text{ExG} = 2 \times g - r - b$$
+                </div>
+                
+                <div class="text-content">
+                    Trong đó các kênh màu chuẩn hóa:
+                </div>
+                
+                <div class="formula">
+                    $$r = \frac{R}{R+G+B}, \quad g = \frac{G}{R+G+B}, \quad b = \frac{B}{R+G+B}$$
+                </div>
+                
+                <div class="text-content">
+                    Với $R, G, B \in [0, 255]$ là giá trị RGB từ mã màu pixel.
+                </div>
+                
+                <div class="subsection-title">8.2 Logic Phân Tích & Ánh Xạ Bảng Màu</div>
+                
+                <div class="highlight-box">
+                    <strong>📊 Xử lý Pixel:</strong> Duyệt qua từng tọa độ (row, col) của Bitmap ảnh lá cây<br/>
+                    <strong>🧮 Tính ExG:</strong> Áp dụng công thức cho từng pixel<br/>
+                    <strong>🎨 Chẩn đoán:</strong> Ánh xạ giá trị ExG sang màu
+                </div>
+                
+                <pre><span class="code-label">ExG Analysis & Diagnosis</span>
+// Trích xuất pixel từ Bitmap
+int[] pixels = new int[bitmap.getWidth() * bitmap.getHeight()];
+bitmap.getPixels(pixels, ...);
+
+for (int i = 0; i < pixels.length; i++) {
+    int pixelColor = pixels[i];
+    
+    // Tách RGB
+    int r = Color.red(pixelColor);
+    int g = Color.green(pixelColor);
+    int b = Color.blue(pixelColor);
+    
+    // Chuẩn hóa
+    int sum = r + g + b;
+    double norm_r = (double) r / sum;
+    double norm_g = (double) g / sum;
+    double norm_b = (double) b / sum;
+    
+    // Tính ExG
+    double exg = 2 * norm_g - norm_r - norm_b;
+    
+    // Chẩn đoán
+    if (exg > 0.1) {
+        // Lá khỏe mạnh → Xanh lá cây (#3DDC84)
+        outputPixels[i] = Color.parseColor("#3DDC84");
+    } else {
+        // Lá bệnh → Đỏ (#FF0000)
+        outputPixels[i] = Color.parseColor("#FF0000");
+    }
+}</pre>
+                
+                <div class="subsection-title">8.3 Kết Quả: ExG Heatmap</div>
+                <div class="text-content">
+                    Kết quả là một ảnh Bitmap mới (ExG Heatmap) đè lên ảnh gốc. Các khu vực bị bệnh hoặc thiếu dinh dưỡng sẽ nổi bật với sắc đỏ, giúp nông dân dễ dàng xác định vùng cần chăm sóc đặc biệt.
+                </div>
+                
+                <div class="highlight-box">
+                    <strong>✅ Lợi ích:</strong> Xử lý cục bộ trên thiết bị → Không cần Internet → Hoạt động Offline
+                </div>
+            </div>
+            
+            <!-- 9. TECH STACK -->
+            <div class="section">
+                <div class="section-title">⚙️ Công Nghệ & Stack</div>
+                
+                <div class="tech-stack">
+                    <div class="tech-item">
+                        <strong>💻 Platform</strong>
+                        <p>Android SDK (API 21+)<br/>Java 17/21</p>
+                    </div>
+                    <div class="tech-item">
+                        <strong>📍 GIS & Maps</strong>
+                        <p>Google Maps SDK<br/>PostGIS (Cloud)</p>
+                    </div>
+                    <div class="tech-item">
+                        <strong>💾 Database</strong>
+                        <p>Room SQLite (Local)<br/>Supabase PostgreSQL (Cloud)</p>
+                    </div>
+                    <div class="tech-item">
+                        <strong>☁️ Cloud</strong>
+                        <p>Supabase Auth<br/>Google Earth Engine API</p>
+                    </div>
+                    <div class="tech-item">
+                        <strong>🔐 Security</strong>
+                        <p>JWT Authentication<br/>Row Level Security (RLS)</p>
+                    </div>
+                    <div class="tech-item">
+                        <strong>🛰️ Satellite</strong>
+                        <p>Sentinel-2 Imagery<br/>NDVI Analysis</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 10. SETUP & DEPLOYMENT -->
+            <div class="section">
+                <div class="section-title">🚀 Hướng Dẫn Thiết Lập & Triển Khai</div>
+                
+                <div class="subsection-title">10.1 Cấu Hình Google Maps API</div>
+                <ol style="margin-left: 20px; color: #555;">
+                    <li>Truy cập <strong>Google Cloud Console</strong></li>
+                    <li>Kích hoạt <strong>Maps SDK for Android</strong></li>
+                    <li>Tạo <strong>API Key</strong></li>
+                    <li>Thêm vào <code>local.properties</code>:
+                        <pre style="margin-top: 8px;">MAPS_API_KEY=AIzaSy...YourMapsApiKeyHere...</pre>
+                    </li>
+                </ol>
+                
+                <div class="subsection-title">10.2 Cấu Hình Google Earth Engine</div>
+                <ol style="margin-left: 20px; color: #555;">
+                    <li>Tạo <strong>Service Account</strong> trên Google Cloud Console</li>
+                    <li>Gán role <strong>Earth Engine Resource Viewer</strong></li>
+                    <li>Tạo cặp khóa JSON, tải xuống</li>
+                    <li>Đặt tệp vào: <code>app/src/main/assets/service_account_key.json</code></li>
+                </ol>
+                
+                <div class="subsection-title">10.3 Cấu Hình Supabase</div>
+                <ol style="margin-left: 20px; color: #555;">
+                    <li>Tạo project PostgreSQL mới trên <strong>Supabase.com</strong></li>
+                    <li>Kích hoạt extension PostGIS:
+                        <pre style="margin-top: 8px;">CREATE EXTENSION IF NOT EXISTS postgis;</pre>
+                    </li>
+                    <li>Nhập schema SQL từ <code>supabase_schema.sql</code></li>
+                    <li>Thêm vào <code>local.properties</code>:
+                        <pre style="margin-top: 8px;">SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</pre>
+                    </li>
+                </ol>
+                
+                <div class="subsection-title">10.4 Build & Deploy</div>
+                <pre><span class="code-label">Compile & Package</span>
+# Kiểm tra mã nguồn
+./gradlew compileDebugJavaWithJavac
+
+# Đóng gói Debug APK
+./gradlew assembleDebug
+
+# Cài đặt lên thiết bị
+adb install app/build/outputs/apk/debug/app-debug.apk
+
+# Release Build (Production)
+./gradlew assembleRelease</pre>
+            </div>
+            
+            <!-- 11. BENEFITS -->
+            <div class="section">
+                <div class="section-title">💡 Lợi Ích Chính</div>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3>🧑‍🌾 Cho Nông Dân</h3>
+                        <p><strong>• </strong>Quản lý đất đai khoa học và chính xác<br/><strong>•</strong> Phát hiện sâu bệnh sớm<br/><strong>•</strong> Tăng năng suất, giảm chi phí</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>📱 Tiện Lợi Kỹ Thuật</h3>
+                        <p><strong>•</strong> Hoạt động offline không cần Internet<br/><strong>•</strong> Tự động đồng bộ khi có mạng<br/><strong>•</strong> Giao diện dễ sử dụng</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>☁️ Scalability</h3>
+                        <p><strong>•</strong> Cloud-based infrastructure<br/><strong>•</strong> Hỗ trợ hàng ngàn nông dân<br/><strong>•</strong> Đồng bộ dữ liệu tập trung</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🔬 Khoa Học Dữ Liệu</h3>
+                        <p><strong>•</strong> Phân tích ảnh vệ tinh (NDVI)<br/><strong>•</strong> Chẩn đoán tự động (ExG)<br/><strong>•</strong> Dữ liệu lịch sử cho quyết định</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🔐 Bảo Mật</h3>
+                        <p><strong>•</strong> Xác thực đầy đủ (Supabase Auth)<br/><strong>•</strong> Mã hóa dữ liệu<br/><strong>•</strong> RLS cho phép dữ liệu cá nhân</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>📊 Mở Rộng</h3>
+                        <p><strong>•</strong> Hỗ trợ nhiều loại cây trồng<br/><strong>•</strong> Có thể thêm các chỉ số GIS khác<br/><strong>•</strong> Tích hợp IoT, cảm biến ngoài</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 12. CHALLENGES & SOLUTIONS -->
+            <div class="section">
+                <div class="section-title">⚠️ Thách Thức & Giải Pháp</div>
+                
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <tr style="background: #f5f5f5; border-bottom: 2px solid #667eea;">
+                        <th style="padding: 12px; text-align: left; color: #667eea; font-weight: 600;">Thách Thức</th>
+                        <th style="padding: 12px; text-align: left; color: #667eea; font-weight: 600;">Giải Pháp</th>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <td style="padding: 12px;"><strong>📍 Dữ liệu không gian phức tạp</strong></td>
+                        <td style="padding: 12px;">Lưu JSON cục bộ, PostGIS trên cloud</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <td style="padding: 12px;"><strong>🔄 Đồng bộ offline-first</strong></td>
+                        <td style="padding: 12px;">Room DB cục bộ + tiến trình đồng bộ nền</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <td style="padding: 12px;"><strong>🔑 ID Translation khi sync</strong></td>
+                        <td style="padding: 12px;">Transaction an toàn, cập nhật FK</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <td style="padding: 12px;"><strong>🛰️ Xác thực GEE trên di động</strong></td>
+                        <td style="padding: 12px;">Service Account JWT, không yêu cầu người dùng login</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <td style="padding: 12px;"><strong>💾 Quản lý bộ nhớ ảnh NDVI</strong></td>
+                        <td style="padding: 12px;">LruCache 128 tiles, giảm tải đĩa/mạng</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <td style="padding: 12px;"><strong>🖼️ Xử lý ảnh cục bộ nhanh</strong></td>
+                        <td style="padding: 12px;">Thuật toán ExG với Bitmap trực tiếp</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px;"><strong>🔐 JWT token hết hạn</strong></td>
+                        <td style="padding: 12px;">Bắt 401 error, yêu cầu re-login</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- 13. FUTURE ROADMAP -->
+            <div class="section">
+                <div class="section-title">🚀 Lộ Trình Phát Triển Tương Lai</div>
+                
+                <div class="highlight-box">
+                    <strong>🔄 Phase 1 (Q2 2024):</strong> MVP cơ bản - Quản lý lô đất, NDVI, ExG<br/>
+                    <strong>📊 Phase 2 (Q3 2024):</strong> Phân tích dữ liệu - Biểu đồ, báo cáo, dự báo<br/>
+                    <strong>📲 Phase 3 (Q4 2024):</strong> Mở rộng - IoT sensors, thời tiết API, Marketplace<br/>
+                    <strong>🤖 Phase 4 (2025+):</strong> AI/ML - Nhận diện dịch bệnh, khuyến nghị chăm sóc tự động
+                </div>
+                
+                <div class="text-content" style="margin-top: 20px;">
+                    <strong>Tính năng tiềm năng:</strong>
+                </div>
+                
+                <ul class="benefits-list">
+                    <li>Tích hợp <strong>IoT sensors</strong> (độ ẩm, nhiệt độ, pH) qua Bluetooth</li>
+                    <li>API thời tiết thực tế để dự báo bệnh</li>
+                    <li>Nhận diện dịch bệnh tự động bằng <strong>Deep Learning (TensorFlow Lite)</strong></li>
+                    <li>Marketplace nông sản kết nối nông dân - người mua</li>
+                    <li>Hỗ trợ <strong>iOS</strong> và <strong>Web Dashboard</strong> cho quản lý tập trung</li>
+                    <li>Xác thực <strong>Blockchain</strong> cho truy xuất nguồn gốc nông sản</li>
+                </ul>
+            </div>
+            
+            <!-- CONCLUSION -->
+            <div class="section">
+                <div class="section-title">✨ Kết Luận</div>
+                
+                <div class="text-content">
+                    <p><strong>XimiFarming MobileGIS</strong> là một dự án tiên tiến kết hợp các công nghệ hiện đại - <strong>Android GIS, Cloud PostgreSQL, Satellite Analytics, và Image Processing</strong> - để tạo ra một giải pháp toàn diện cho nông nghiệp thông minh.</p>
+                    
+                    <p style="margin-top: 15px;">Điểm mạnh của dự án:</p>
+                </div>
+                
+                <ul class="benefits-list">
+                    <li><strong>Offline-First Architecture:</strong> Hoạt động độc lập khi không có mạng</li>
+                    <li><strong>Hybrid Storage:</strong> Local + Cloud tối ưu hiệu suất và độ tin cậy</li>
+                    <li><strong>Advanced Analytics:</strong> NDVI (vệ tinh) + ExG (cục bộ) cho chẩn đoán đa chiều</li>
+                    <li><strong>Spatial Database:</strong> PostGIS cho xử lý GIS tính toán chuẩn xác</li>
+                    <li><strong>Security First:</strong> Xác thực đầy đủ, RLS, mã hóa dữ liệu</li>
+                </ul>
+                
+                <div class="text-content" style="margin-top: 20px;">
+                    <p>Với kiến trúc vững chắc và công nghệ tiên tiến, XimiFarming MobileGIS sẵn sàng mở rộng quy mô để phục vụ hàng ngàn nông dân, đóng góp vào sự phát triển nông nghiệp bền vững tại Việt Nam.</p>
+                </div>
+            </div>
+            
+        </div>
+        
+        <div class="footer">
+            <p>📄 Bài Thuyết Trình Chi Tiết - XimiFarming MobileGIS | Tạo ngày: 19/06/2026</p>
+            <p>🔗 GitHub: <a href="https://github.com/chuvitvang/XimiFarming_MobileGIS" style="color: #667eea; text-decoration: none;">github.com/chuvitvang/XimiFarming_MobileGIS</a></p>
+        </div>
+    </div>
+    
+    <button class="print-button" onclick="window.print()">📥 In / Tải PDF</button>
+</body>
+</html>
