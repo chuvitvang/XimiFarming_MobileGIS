@@ -16,3 +16,4 @@
 /app/src/main/assets/service_account_key.json
 /app/local.properties
 .navigation
+/app/build
