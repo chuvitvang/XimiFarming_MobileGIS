@@ -12,11 +12,11 @@ if (localPropertiesFile.exists()) {
 val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: "YOUR_GOOGLE_MAPS_API_KEY_HERE"
 
 android {
-    namespace = "com.mobilegis.cropwatcher"
+    namespace = "com.mobilegis.ximifarming"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.mobilegis.cropwatcher"
+        applicationId = "com.mobilegis.ximifarming"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -24,6 +24,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+
+        val supabaseUrl = localProperties.getProperty("SUPABASE_URL") ?: "https://your-supabase-project.supabase.co"
+        val supabaseKey = localProperties.getProperty("SUPABASE_ANON_KEY") ?: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your-anon-key-here"
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseKey\"")
     }
 
     buildTypes {
@@ -41,6 +46,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
     packaging {
         jniLibs {

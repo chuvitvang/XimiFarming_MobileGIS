@@ -186,7 +186,7 @@
                         android:layout_marginBottom="16dp" />
 
                     <!-- Custom Chart View for NDVI -->
-                    <com.mobilegis.cropwatcher.ui.components.CustomChartView
+                    <com.mobilegis.ximifarming.ui.components.CustomChartView
                         android:id="@+id/ndvi_chart"
                         android:layout_width="match_parent"
                         android:layout_height="180dp" />

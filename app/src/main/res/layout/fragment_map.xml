@@ -53,6 +53,15 @@
             android:orientation="horizontal">
 
             <ImageButton
+                android:id="@+id/btn_header_sync"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_popup_sync"
+                app:tint="@color/white"
+                android:contentDescription="Đồng bộ" />
+
+            <ImageButton
                 android:id="@+id/btn_header_search"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
@@ -407,7 +416,7 @@
                         android:textSize="12sp"
                         android:textColor="@color/text_muted"
                         android:layout_marginBottom="4dp" />
-                    <com.mobilegis.cropwatcher.ui.components.CustomChartView
+                    <com.mobilegis.ximifarming.ui.components.CustomChartView
                         android:id="@+id/ndvi_mini_chart"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent" />
