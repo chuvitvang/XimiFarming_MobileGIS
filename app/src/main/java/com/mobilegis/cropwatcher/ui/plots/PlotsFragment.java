@@ -42,7 +42,7 @@ public class PlotsFragment extends Fragment {
         db = AppDatabase.getDatabase(requireContext());
         
         binding.rvPlots.setLayoutManager(new LinearLayoutManager(getContext()));
-        adapter = new PlotsAdapter(new ArrayList<>(), this::onPlotClicked);
+        adapter = new PlotsAdapter(new ArrayList<>(), this::onPlotClicked, this::onPlotLocateClicked);
         binding.rvPlots.setAdapter(adapter);
 
         loadPlotsData();
@@ -74,6 +74,12 @@ public class PlotsFragment extends Fragment {
         startActivity(intent);
     }
 
+    private void onPlotLocateClicked(Plot plot) {
+        if (getActivity() instanceof com.mobilegis.cropwatcher.MainActivity) {
+            ((com.mobilegis.cropwatcher.MainActivity) getActivity()).navigateToPlotOnMap(plot.getId());
+        }
+    }
+
     // --- Inner Adapter Class ---
     
     private static class PlotsAdapter extends RecyclerView.Adapter<PlotsAdapter.PlotViewHolder> {
@@ -81,12 +87,18 @@ public class PlotsFragment extends Fragment {
             void onPlotClick(Plot plot);
         }
 
-        private List<Plot> plotsList;
-        private final OnPlotClickListener listener;
+        public interface OnPlotLocateListener {
+            void onPlotLocate(Plot plot);
+        }
 
-        public PlotsAdapter(List<Plot> plotsList, OnPlotClickListener listener) {
+        private List<Plot> plotsList;
+        private final OnPlotClickListener clickListener;
+        private final OnPlotLocateListener locateListener;
+
+        public PlotsAdapter(List<Plot> plotsList, OnPlotClickListener clickListener, OnPlotLocateListener locateListener) {
             this.plotsList = plotsList;
-            this.listener = listener;
+            this.clickListener = clickListener;
+            this.locateListener = locateListener;
         }
 
         public void setPlotsList(List<Plot> plots) {
@@ -105,7 +117,7 @@ public class PlotsFragment extends Fragment {
         @Override
         public void onBindViewHolder(@NonNull PlotViewHolder holder, int position) {
             Plot plot = plotsList.get(position);
-            holder.bind(plot, listener);
+            holder.bind(plot, clickListener, locateListener);
         }
 
         @Override
@@ -123,7 +135,7 @@ public class PlotsFragment extends Fragment {
                 this.context = binding.getRoot().getContext();
             }
 
-            public void bind(Plot plot, OnPlotClickListener listener) {
+            public void bind(Plot plot, OnPlotClickListener clickListener, OnPlotLocateListener locateListener) {
                 binding.txtPlotName.setText(plot.getName());
                 binding.txtPlotArea.setText(String.format("Diện tích: %.1f m²", plot.getAreaSquareMeters()));
                 
@@ -150,7 +162,8 @@ public class PlotsFragment extends Fragment {
                 }
                 binding.viewStatusIndicator.setBackgroundColor(indicatorColor);
 
-                itemView.setOnClickListener(v -> listener.onPlotClick(plot));
+                itemView.setOnClickListener(v -> clickListener.onPlotClick(plot));
+                binding.btnLocatePlot.setOnClickListener(v -> locateListener.onPlotLocate(plot));
             }
         }
     }

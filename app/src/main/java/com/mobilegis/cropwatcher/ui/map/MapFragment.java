@@ -55,7 +55,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private EarthEngineClient geeClient;
     
     // Map states
-    private enum MapMode { NORMAL, DRAW_PLOT, ADD_CROP }
+    private enum MapMode { NORMAL, DRAW_PLOT }
     private MapMode currentMode = MapMode.NORMAL;
     
     // Drawing references
@@ -73,6 +73,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     // Selection details
     private Plot selectedPlot;
     private Crop selectedCrop;
+    private Integer pendingPlotIdToFocus = null;
 
     @Nullable
     @Override
@@ -115,15 +116,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         });
 
-        // Toggle Adding Crop
-        binding.btnAddCrop.setOnClickListener(v -> {
-            if (currentMode == MapMode.ADD_CROP) {
-                cancelDrawingMode();
-            } else {
-                startAddCropMode();
-            }
-        });
-
         // Toggle GEE Layer
         binding.btnToggleGee.setOnClickListener(v -> toggleGeeNdviLayer());
 
@@ -157,12 +149,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         // Load existing GIS data (Polygons + Crop Markers)
         reloadMapData();
 
+        if (pendingPlotIdToFocus != null) {
+            focusOnPlot(pendingPlotIdToFocus);
+            pendingPlotIdToFocus = null;
+        }
+
         // Map Click Listener for drawing/placing items
         googleMap.setOnMapClickListener(latLng -> {
             if (currentMode == MapMode.DRAW_PLOT) {
                 handleDrawPlotClick(latLng);
-            } else if (currentMode == MapMode.ADD_CROP) {
-                handlePlacedCropClick(latLng);
             } else {
                 hideSelectionCard();
             }
@@ -378,68 +373,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     // --- Adding Crop Mode Logic ---
 
-    private void startAddCropMode() {
-        cancelDrawingMode();
-        currentMode = MapMode.ADD_CROP;
-        binding.btnAddCrop.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.secondary));
-        binding.btnAddCrop.setImageDrawable(ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_menu_close_clear_cancel));
-        
-        binding.instructionPanel.setVisibility(View.VISIBLE);
-        binding.txtInstruction.setText("THÊM CÂY TRỒNG: Chạm bất kỳ đâu trên bản đồ để ghim cây.");
-    }
-
-    private void handlePlacedCropClick(LatLng latLng) {
-        // Show Input Dialog
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
-        builder.setTitle("Thêm Cây Trồng Định Vị");
-
-        LinearLayout layout = new LinearLayout(getContext());
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(32, 16, 32, 16);
-
-        final EditText nameInput = new EditText(getContext());
-        nameInput.setHint("Tên/Mã Cây (ví dụ: Cây Cam #12)");
-        layout.addView(nameInput);
-
-        final EditText typeInput = new EditText(getContext());
-        typeInput.setHint("Loại cây (ví dụ: Cam sành)");
-        layout.addView(typeInput);
-
-        builder.setView(layout);
-
-        builder.setPositiveButton("Thêm", (dialog, which) -> {
-            String name = nameInput.getText().toString().trim();
-            String type = typeInput.getText().toString().trim();
-
-            if (name.isEmpty()) name = "Cây Mới";
-            if (type.isEmpty()) type = "Cây ăn quả";
-
-            // Find which plot this crop belongs to (GIS point in polygon check)
-            int plotId = findPlotForLatLng(latLng);
-            if (plotId == -1) {
-                // Not inside any plot, prompt warning or save to first plot
-                List<Plot> allPlots = db.plotDao().getAllPlots();
-                if (!allPlots.isEmpty()) {
-                    plotId = allPlots.get(0).getId();
-                } else {
-                    Toast.makeText(getContext(), "Vui lòng vẽ ít nhất 1 lô đất trước khi đặt cây!", Toast.LENGTH_LONG).show();
-                    cancelDrawingMode();
-                    return;
-                }
-            }
-
-            // Save to DB
-            Crop crop = new Crop(plotId, name, type, System.currentTimeMillis(), latLng.latitude, latLng.longitude, "HEALTHY");
-            db.cropDao().insert(crop);
-
-            Toast.makeText(getContext(), "Đã định vị cây: " + name, Toast.LENGTH_SHORT).show();
-            cancelDrawingMode();
-            reloadMapData();
-        });
-
-        builder.setNegativeButton("Hủy", (dialog, which) -> cancelDrawingMode());
-        builder.show();
-    }
 
     private int findPlotForLatLng(LatLng latLng) {
         // Simple bounding/ray casting algorithm check
@@ -492,9 +425,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         // Reset buttons states
         binding.btnDrawPlot.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
         binding.btnDrawPlot.setImageDrawable(ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_menu_edit));
-        
-        binding.btnAddCrop.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.white));
-        binding.btnAddCrop.setImageDrawable(ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_input_add));
 
         binding.instructionPanel.setVisibility(View.GONE);
         
@@ -913,5 +843,35 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private String formatDate(long timestamp) {
         java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault());
         return sdf.format(new java.util.Date(timestamp));
+    }
+
+    public void focusOnPlot(int plotId) {
+        if (googleMap == null) {
+            pendingPlotIdToFocus = plotId;
+            return;
+        }
+        new Thread(() -> {
+            Plot plot = db.plotDao().getPlotById(plotId);
+            if (plot != null) {
+                List<LatLng> points = parsePoints(plot.getCoordinatesJson());
+                if (!points.isEmpty()) {
+                    double sumLat = 0, sumLng = 0;
+                    for (LatLng p : points) {
+                        sumLat += p.latitude;
+                        sumLng += p.longitude;
+                    }
+                    LatLng center = new LatLng(sumLat / points.size(), sumLng / points.size());
+                    
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            if (googleMap != null) {
+                                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(center, 16f));
+                                showSelectedPlot(plot);
+                            }
+                        });
+                    }
+                }
+            }
+        }).start();
     }
 }

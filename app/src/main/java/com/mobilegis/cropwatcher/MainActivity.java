@@ -44,4 +44,11 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
     }
+
+    public void navigateToPlotOnMap(int plotId) {
+        binding.bottomNavigation.setSelectedItemId(R.id.nav_map);
+        if (mapFragment instanceof MapFragment) {
+            ((MapFragment) mapFragment).focusOnPlot(plotId);
+        }
+    }
 }

@@ -81,6 +81,17 @@
                 android:textStyle="bold" />
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Locate Plot on Map Button -->
+        <ImageButton
+            android:id="@+id/btn_locate_plot"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Định vị trên bản đồ"
+            app:srcCompat="@android:drawable/ic_dialog_map"
+            app:tint="@color/primary" />
+
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

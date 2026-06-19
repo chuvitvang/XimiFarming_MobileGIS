@@ -71,17 +71,7 @@
             app:tint="@color/primary"
             app:fabSize="normal" />
 
-        <!-- Add Crop Tool Button -->
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/btn_add_crop"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:contentDescription="Thêm cây trồng"
-            app:srcCompat="@android:drawable/ic_input_add"
-            app:backgroundTint="@color/white"
-            app:tint="@color/secondary"
-            app:fabSize="normal" />
+
 
         <!-- Toggle GEE NDVI Layer -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
